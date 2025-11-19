@@ -1,0 +1,32 @@
+name: Continuous Integration - Static Analysis (Docker)
+
+on:
+  push:
+    paths:
+      - ".github/workflows/static-analysis-docker.yml"
+      - "**/docker-compose.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/static-analysis-docker.yml"
+      - "**/docker-compose.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: static-analysis-docker-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5.0.1
+
+      - name: Install Brioche
+        uses: brioche-dev/setup-brioche@v1.5.0
+
+      - name: Install dclint
+        run: brioche install -r dclint
+
+      - name: Check linting
+        run: dclint --disable-rule "no-unbound-port-interfaces" --disable-rule "require-quotes-in-ports" --disable-rule "require-project-name-field" --recursive .

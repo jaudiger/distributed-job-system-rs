@@ -1,0 +1,408 @@
+x-client-application-common: &client-application-common
+  build:
+    context: .
+    dockerfile: services/client-application/Dockerfile
+  restart: unless-stopped
+  environment:
+    KAFKA_URI: kafka-1:9092,kafka-2:9092,kafka-3:9092
+    MONGODB_URI: mongodb://user:password@mongo-primary:27017,mongo-secondary-1:27017,mongo-secondary-2:27017/?replicaSet=mongoReplicaSet&authSource=application
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
+    OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
+    OTEL_METRIC_EXPORT_INTERVAL: 30000
+    OTEL_TRACES_SAMPLER: "always_off" # See https://opentelemetry.io/docs/zero-code/obi/configure/sample-traces/#sampler-name
+    OTEL_TRACES_SAMPLER_ARG: "0" # Percentage of traces to sample
+    RUST_LOG: info
+  healthcheck:
+    test:
+      - "CMD-SHELL"
+      - |
+        curl -s http://$(hostname):8080/health | grep -E '"status":"UP"'
+    interval: 10s
+    timeout: 5s
+    retries: 3
+  depends_on:
+    jaeger:
+      condition: service_healthy
+    kafka-post-init:
+      condition: service_completed_successfully
+    mongo-post-init:
+      condition: service_completed_successfully
+    prometheus:
+      condition: service_healthy
+
+x-jaeger-common: &jaeger-common
+  image: docker.io/jaegertracing/jaeger:2.11.0
+  restart: unless-stopped
+  environment:
+    LOG_LEVEL: "info"
+    COLLECTOR_OTLP_ENABLED: "true"
+    COLLECTOR_OTLP_GRPC_HOST_PORT: "0.0.0.0:4317"
+    COLLECTOR_OTLP_HTTP_HOST_PORT: "0.0.0.0:4318"
+    JAEGER_USERNAME: ""
+    JAEGER_PASSWORD: ""
+    SPAN_STORAGE_TYPE: "memory"
+  healthcheck:
+    test:
+      - "CMD"
+      - "wget"
+      - "-qO-"
+      - "http://127.0.0.1:16686/"
+    interval: 10s
+    timeout: 5s
+    retries: 3
+
+x-kafka-common: &kafka-common
+  image: docker.io/apache/kafka:4.0.0
+  restart: unless-stopped
+  entrypoint: >
+    bash -c '
+      if [ ! -f /var/lib/kafka/data/meta.properties ]; then
+        /opt/kafka/bin/kafka-storage.sh format --ignore-formatted --cluster-id "$${KAFKA_KRAFT_CLUSTER_ID}" --config /etc/kafka/server.properties
+      fi
+      exec /opt/kafka/bin/kafka-server-start.sh /etc/kafka/server.properties
+    '
+  environment:
+    KAFKA_KRAFT_CLUSTER_ID: 4qSrjHzBT8GBUpE6fHa6sg
+    KAFKA_JVM_PERFORMANCE_OPTS: "-Xms1g -Xmx1g"
+  healthcheck:
+    test:
+      - "CMD-SHELL"
+      - |
+        /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server $(hostname):9092
+    interval: 10s
+    timeout: 5s
+    retries: 3
+
+x-mongo-common: &mongo-common
+  image: docker.io/mongo:8.2.1
+  restart: unless-stopped
+  command:
+    - "mongod"
+    - "--config"
+    - "/etc/mongo/mongod.conf"
+  environment:
+    MONGO_INITDB_ROOT_USERNAME: "root"
+    MONGO_INITDB_ROOT_PASSWORD: "password"
+    MONGO_PORT: "27017"
+  healthcheck:
+    test:
+      - "CMD-SHELL"
+      - |
+        mongosh --quiet --eval "db.runCommand({ ping: 1 }).ok" | grep 1
+    interval: 10s
+    timeout: 5s
+    retries: 3
+
+x-prometheus-common: &prometheus-common
+  image: docker.io/prom/prometheus:v3.7.3
+  restart: unless-stopped
+  user: root
+  entrypoint: prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus-data --storage.tsdb.retention.time=15d --enable-feature=extra-scrape-metrics --web.enable-lifecycle --web.enable-otlp-receiver
+  healthcheck:
+    test:
+      - "CMD-SHELL"
+      - |
+        wget -qO- http://127.0.0.1:9090/-/ready
+    interval: 10s
+    timeout: 5s
+    retries: 3
+
+x-server-application-common: &server-application-common
+  build:
+    context: .
+    dockerfile: services/server-application/Dockerfile
+  restart: unless-stopped
+  environment:
+    KAFKA_URI: kafka-1:9092,kafka-2:9092,kafka-3:9092
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4318/v1/traces
+    OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
+    OTEL_METRIC_EXPORT_INTERVAL: 30000
+    OTEL_TRACES_SAMPLER: "always_off" # See https://opentelemetry.io/docs/zero-code/obi/configure/sample-traces/#sampler-name
+    OTEL_TRACES_SAMPLER_ARG: "0" # Percentage of traces to sample
+    RUST_LOG: info
+  healthcheck:
+    test:
+      - "CMD-SHELL"
+      - |
+        curl -s http://$(hostname):8080/health | grep -E '"status":"UP"'
+    interval: 10s
+    timeout: 5s
+    retries: 3
+  depends_on:
+    jaeger:
+      condition: service_healthy
+    kafka-post-init:
+      condition: service_completed_successfully
+    prometheus:
+      condition: service_healthy
+
+services:
+  jaeger:
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "5778:5778"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "14250:14250"
+      - "14268:14268"
+      - "14269:14269"
+      - "16686:16686"
+    <<: *jaeger-common
+
+  kafka-post-init:
+    image: docker.io/apache/kafka:4.0.0
+    depends_on:
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+      kafka-3:
+        condition: service_healthy
+    environment:
+      KAFKA_TOPIC_NAMES: "application.operation.request,application.operation.response"
+    entrypoint: >
+      bash -c '
+        # Wait for the brokers to be ready
+        for i in 1 2 3; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-$${i}:9092 --list
+          while [ $$? -ne 0 ]; do
+            sleep 5
+            /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-$${i}:9092 --list
+          done
+        done
+
+        # Create the topics
+        IFS=","
+        for topic in $${KAFKA_TOPIC_NAMES}; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-1:9092 --topic "$${topic}" --create --if-not-exists
+        done
+      '
+    restart: no
+
+  kafka-1:
+    volumes:
+      - kafka-1-data:/var/lib/kafka
+    configs:
+      - source: kafka-1-cfg
+        target: /etc/kafka/server.properties
+    ports:
+      - "9092:9092"
+    <<: *kafka-common
+
+  kafka-2:
+    volumes:
+      - kafka-2-data:/var/lib/kafka
+    configs:
+      - source: kafka-2-cfg
+        target: /etc/kafka/server.properties
+    ports:
+      - "9093:9092"
+    <<: *kafka-common
+
+  kafka-3:
+    volumes:
+      - kafka-3-data:/var/lib/kafka
+    configs:
+      - source: kafka-3-cfg
+        target: /etc/kafka/server.properties
+    ports:
+      - "9094:9092"
+    <<: *kafka-common
+
+  mongo-post-init:
+    image: docker.io/mongo:8.2.1
+    depends_on:
+      mongo-primary:
+        condition: service_healthy
+      mongo-secondary-1:
+        condition: service_healthy
+      mongo-secondary-2:
+        condition: service_healthy
+    environment:
+      MONGO_ROOT_USERNAME: "root"
+      MONGO_ROOT_PASSWORD: "password"
+      MONGO_CLIENT_USERNAME: "user"
+      MONGO_CLIENT_PASSWORD: "password"
+      MONGO_CLIENT_DATABASE: "application"
+    entrypoint: >
+      bash -c '
+        # Initialize the replica set
+        mongosh --host mongo-primary --username $${MONGO_ROOT_USERNAME} --password $${MONGO_ROOT_PASSWORD} --authenticationDatabase admin --eval "
+          try {
+            rs.initiate({
+              _id: \"mongoReplicaSet\",
+              members: [
+                { _id: 0, host: \"mongo-primary:27017\" },
+                { _id: 1, host: \"mongo-secondary-1:27017\" },
+                { _id: 2, host: \"mongo-secondary-2:27017\" }
+              ]
+            });
+          } catch (err) {
+            print(\"Error during initializing replica set: \" + err);
+          }
+        ";
+
+        # Initial wait to give time for the replica set to stabilize
+        sleep 20
+
+        # Wait until the primary is ready
+        attempts=0
+        while true; do
+          is_primary=$(mongosh --host mongo-primary --username $${MONGO_ROOT_USERNAME} --password $${MONGO_ROOT_PASSWORD} --authenticationDatabase admin --quiet --eval "
+            try {
+              print(rs.isMaster().ismaster);
+            } catch (err) {
+              print(\"\");
+            }
+          " | tr -d "\r\n")
+          if [ "$${is_primary}" = "true" ]; then
+            break
+          fi
+          if [ "$${attempts}" -ge "10" ]; then
+            echo "Timeout waiting for primary to be ready"
+            exit 1
+          fi
+
+          sleep 5
+          attempts=$((attempts + 1))
+        done
+
+        # Create the user for the client application
+        mongosh --host mongo-primary --username $${MONGO_ROOT_USERNAME} --password $${MONGO_ROOT_PASSWORD} --authenticationDatabase admin --eval "
+          db = db.getSiblingDB(\"$${MONGO_CLIENT_DATABASE}\");
+          if (!db.getUser(\"$${MONGO_CLIENT_USERNAME}\")) {
+            db.createUser({
+              user: \"$${MONGO_CLIENT_USERNAME}\",
+              pwd: \"$${MONGO_CLIENT_PASSWORD}\",
+              roles: [{ role: \"readWrite\", db: \"$${MONGO_CLIENT_DATABASE}\" }]
+            });
+          }
+        ";
+      '
+    restart: no
+
+  mongo-pre-init:
+    image: docker.io/mongo:8.2.1
+    volumes:
+      - mongo-security:/etc/mongo/security
+    entrypoint: >
+      bash -c '
+        # Check if the security key exists
+        if [ -f /etc/mongo/security/key ]; then
+          exit 0
+        fi
+
+        openssl rand -base64 756 > /etc/mongo/security/key
+        chmod 400 /etc/mongo/security/key
+        chown mongodb:mongodb /etc/mongo/security/key
+      '
+    restart: no
+
+  mongo-primary:
+    depends_on:
+      mongo-pre-init:
+        condition: service_completed_successfully
+    volumes:
+      - mongo-security:/etc/mongo/security
+      - mongo-primary-data:/data/db
+    configs:
+      - source: mongo-primary-cfg
+        target: /etc/mongo/mongod.conf
+    ports:
+      - "27017:27017"
+    <<: *mongo-common
+
+  mongo-secondary-1:
+    depends_on:
+      mongo-pre-init:
+        condition: service_completed_successfully
+    volumes:
+      - mongo-security:/etc/mongo/security
+      - mongo-secondary-1-data:/data/db
+    configs:
+      - source: mongo-secondary-cfg
+        target: /etc/mongo/mongod.conf
+    ports:
+      - "27018:27017"
+    <<: *mongo-common
+
+  mongo-secondary-2:
+    depends_on:
+      mongo-pre-init:
+        condition: service_completed_successfully
+    volumes:
+      - mongo-security:/etc/mongo/security
+      - mongo-secondary-2-data:/data/db
+    configs:
+      - source: mongo-secondary-cfg
+        target: /etc/mongo/mongod.conf
+    ports:
+      - "27019:27017"
+    <<: *mongo-common
+
+  prometheus:
+    volumes:
+      - prometheus-data:/prometheus-data
+    configs:
+      - source: prometheus-cfg
+        target: /etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    <<: *prometheus-common
+
+  client-application-1:
+    ports:
+      - "8080:8080"
+    <<: *client-application-common
+
+  client-application-2:
+    ports:
+      - "8081:8080"
+    <<: *client-application-common
+
+  client-application-3:
+    ports:
+      - "8082:8080"
+    <<: *client-application-common
+
+  server-application-1:
+    <<: *server-application-common
+
+  server-application-2:
+    <<: *server-application-common
+
+  server-application-3:
+    <<: *server-application-common
+
+volumes:
+  kafka-1-data:
+    driver: local
+  kafka-2-data:
+    driver: local
+  kafka-3-data:
+    driver: local
+  mongo-security:
+    driver: local
+  mongo-primary-data:
+    driver: local
+  mongo-secondary-1-data:
+    driver: local
+  mongo-secondary-2-data:
+    driver: local
+  prometheus-data:
+    driver: local
+
+configs:
+  kafka-1-cfg:
+    file: ./services/kafka/config/server-1.properties
+  kafka-2-cfg:
+    file: ./services/kafka/config/server-2.properties
+  kafka-3-cfg:
+    file: ./services/kafka/config/server-3.properties
+  mongo-primary-cfg:
+    file: ./services/mongo/config/mongod-primary.conf
+  mongo-secondary-cfg:
+    file: ./services/mongo/config/mongod-secondary.conf
+  prometheus-cfg:
+    file: ./services/prometheus/config/prometheus.yml
