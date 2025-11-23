@@ -1257,6 +1257,7 @@ dependencies = [
  "md-5",
  "mongocrypt",
  "mongodb-internal-macros",
+ "opentelemetry",
  "pbkdf2",
  "percent-encoding",
  "rand",

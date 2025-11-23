@@ -9,7 +9,7 @@ rust-version.workspace = true
 anyhow.workspace = true
 axum.workspace = true
 futures = "0.3.31"
-mongodb = { version = "3.4.1", features = ["tracing-unstable"] }
+mongodb = { version = "3.4.1", features = ["opentelemetry", "tracing-unstable"] }
 opentelemetry.workspace = true
 opentelemetry-otlp.workspace = true
 opentelemetry-resource-detectors.workspace = true
