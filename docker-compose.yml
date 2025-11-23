@@ -74,7 +74,7 @@ x-kafka-common: &kafka-common
     retries: 3
 
 x-mongo-common: &mongo-common
-  image: docker.io/mongo:8.2.1
+  image: docker.io/mongo:8.2.2
   restart: unless-stopped
   command:
     - "mongod"
@@ -211,7 +211,7 @@ services:
     <<: *kafka-common
 
   mongo-post-init:
-    image: docker.io/mongo:8.2.1
+    image: docker.io/mongo:8.2.2
     depends_on:
       mongo-primary:
         condition: service_healthy
@@ -283,7 +283,7 @@ services:
     restart: no
 
   mongo-pre-init:
-    image: docker.io/mongo:8.2.1
+    image: docker.io/mongo:8.2.2
     volumes:
       - mongo-security:/etc/mongo/security
     entrypoint: >
