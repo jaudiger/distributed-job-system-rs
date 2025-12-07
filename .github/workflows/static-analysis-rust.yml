@@ -29,7 +29,7 @@ jobs:
     continue-on-error: ${{ matrix.toolchain == 'nightly' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.0
+        uses: actions/checkout@v6.0.1
 
       - name: Install Rust (${{ matrix.toolchain }})
         uses: dtolnay/rust-toolchain@v1
