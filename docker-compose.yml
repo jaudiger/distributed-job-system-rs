@@ -95,7 +95,7 @@ x-mongo-common: &mongo-common
     retries: 3
 
 x-prometheus-common: &prometheus-common
-  image: docker.io/prom/prometheus:v3.8.1
+  image: docker.io/prom/prometheus:v3.9.1
   restart: unless-stopped
   user: root
   entrypoint: prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus-data --storage.tsdb.retention.time=15d --enable-feature=extra-scrape-metrics --web.enable-lifecycle --web.enable-otlp-receiver
