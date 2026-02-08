@@ -16,7 +16,7 @@ nursery = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
 
 [workspace.dependencies]
-anyhow = "1.0.100"
+anyhow = "1.0.101"
 axum = { version = "0.8.8", features = ["macros"] }
 opentelemetry = "0.31.0"
 opentelemetry-otlp = { version = "0.31.0", default-features = false, features = [
