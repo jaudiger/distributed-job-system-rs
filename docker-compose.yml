@@ -32,7 +32,7 @@ x-client-application-common: &client-application-common
       condition: service_healthy
 
 x-jaeger-common: &jaeger-common
-  image: docker.io/jaegertracing/jaeger:2.15.0
+  image: docker.io/jaegertracing/jaeger:2.15.1
   restart: unless-stopped
   environment:
     LOG_LEVEL: "info"
