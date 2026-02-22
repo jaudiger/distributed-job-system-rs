@@ -53,7 +53,7 @@ x-jaeger-common: &jaeger-common
     retries: 3
 
 x-kafka-common: &kafka-common
-  image: docker.io/apache/kafka:4.0.0
+  image: docker.io/apache/kafka:4.2.0
   restart: unless-stopped
   entrypoint: >
     bash -c '
@@ -152,7 +152,7 @@ services:
     <<: *jaeger-common
 
   kafka-post-init:
-    image: docker.io/apache/kafka:4.0.0
+    image: docker.io/apache/kafka:4.2.0
     depends_on:
       kafka-1:
         condition: service_healthy
