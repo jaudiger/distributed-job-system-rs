@@ -33,7 +33,7 @@ The system consists of:
 
 This architecture leverages Rust's performance and safety features while providing a scalable, fault-tolerant system for job processing. All the services are scaled to 3 instances for high availability, and the Kafka consumers' concurrency is set between 10 and 20 to take advantage of multi-core systems. Kafka topics contains 60 partitions for the topic to ensure good distribution of messages across the cluster. Here, when all the Kafka consumers are up, we have at most 20 threads per instance, and since we have 3 instances, we can assign one partition to one thread.
 
-## How to
+## Getting Started
 
 ### Tools Needed
 
@@ -82,16 +82,3 @@ By default, traces sampling are disabled, since the more traces you sample, the 
 Traces are exported to Jaeger, which is accessible on port `16686`. You can view them by navigating to `http://localhost:16686`.
 
 To see the traces when creating a new job, you can navigate to: `http://127.0.0.1:16686/search?service=client-application`
-
-## CI / CD
-
-The CI/CD pipeline is configured using GitHub Actions. The workflow is defined in the [`.github/workflows`](.github/workflows) folder:
-
-- Static Analysis (source code, Docker Compose files, GitHub Actions)
-- Code Audit (on each Cargo dependencies update, or run each day through CronJob)
-
-Additionally, Dependabot is configured to automatically update dependencies (GitHub Actions, Cargo dependencies, Docker Compose).
-
-## Repository configuration
-
-The settings of this repository are managed from the [gitops-deployments](https://github.com/jaudiger/gitops-deployments) repository using Terraform. The actual configuration applied is located in the Terraform module [`modules/github-repository`](https://github.com/jaudiger/gitops-deployments/tree/main/modules/github-repository).
