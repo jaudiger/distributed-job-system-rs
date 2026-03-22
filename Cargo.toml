@@ -19,7 +19,7 @@ pedantic = { level = "warn", priority = -1 }
 anyhow = "1.0.102"
 axum = { version = "0.8.8", features = ["macros"] }
 opentelemetry = "0.31.0"
-opentelemetry-otlp = { version = "0.31.0", default-features = false, features = [
+opentelemetry-otlp = { version = "0.31.1", default-features = false, features = [
     "logs",
     "metrics",
     "trace",
