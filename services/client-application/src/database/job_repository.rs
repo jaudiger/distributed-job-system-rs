@@ -128,10 +128,11 @@ impl JobRepository {
             .collection(Self::COLLECTION_NAME);
 
         let skip = ((page - 1) * page_size) as u64;
+        let filter = doc! {};
 
         #[allow(clippy::cast_possible_wrap)]
         let mut cursor = job_collection
-            .find(doc! {})
+            .find(filter.clone())
             .limit(page_size as i64)
             .skip(skip)
             .await?;
@@ -142,7 +143,7 @@ impl JobRepository {
         }
 
         let total = job_collection
-            .estimated_document_count()
+            .count_documents(filter)
             .await
             .map(usize::try_from)??;
 
