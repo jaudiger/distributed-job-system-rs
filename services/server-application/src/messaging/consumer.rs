@@ -8,6 +8,7 @@ use rdkafka::Message as _;
 use rdkafka::consumer::Consumer as _;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
+use tracing::Instrument as _;
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 counter!(
@@ -184,76 +185,85 @@ impl MessageConsumer {
                             },
                         ));
                     }
-                    let _enter = span.enter();
+                    async {
+                        tracing::info!("Received Kafka message on topic {}", Self::TOPIC_NAME);
 
-                    tracing::info!("Received Kafka message on topic {}", Self::TOPIC_NAME);
+                        MESSAGE_RECEIVED_COUNTER.add(
+                            1,
+                            &[opentelemetry::KeyValue::new("topic", Self::TOPIC_NAME)],
+                        );
 
-                    MESSAGE_RECEIVED_COUNTER.add(
-                        1,
-                        &[opentelemetry::KeyValue::new("topic", Self::TOPIC_NAME)],
-                    );
-
-                    let operation_request = match message.payload_view::<str>() {
-                        None => {
-                            tracing::warn!("No message found");
-
-                            MESSAGE_ERROR_COUNTER.add(
-                                1,
-                                &[opentelemetry::KeyValue::new("topic", Self::TOPIC_NAME)],
-                            );
-
-                            continue;
-                        }
-                        Some(Ok(value)) => match super::model::OperationRequest::try_from(value) {
-                            Ok(deserialize_value) => deserialize_value,
-                            Err(err) => {
-                                tracing::error!("Error while deserializing message: {err:?}");
+                        let operation_request = match message.payload_view::<str>() {
+                            None => {
+                                tracing::warn!("No message found");
 
                                 MESSAGE_ERROR_COUNTER.add(
                                     1,
                                     &[opentelemetry::KeyValue::new("topic", Self::TOPIC_NAME)],
                                 );
 
-                                continue;
+                                return;
                             }
-                        },
-                        Some(Err(err)) => {
-                            tracing::error!("Error while converting message payload: {err:?}");
+                            Some(Ok(value)) => {
+                                match super::model::OperationRequest::try_from(value) {
+                                    Ok(deserialize_value) => deserialize_value,
+                                    Err(err) => {
+                                        tracing::error!(
+                                            "Error while deserializing message: {err:?}"
+                                        );
+
+                                        MESSAGE_ERROR_COUNTER.add(
+                                            1,
+                                            &[opentelemetry::KeyValue::new(
+                                                "topic",
+                                                Self::TOPIC_NAME,
+                                            )],
+                                        );
+
+                                        return;
+                                    }
+                                }
+                            }
+                            Some(Err(err)) => {
+                                tracing::error!("Error while converting message payload: {err:?}");
+
+                                MESSAGE_ERROR_COUNTER.add(
+                                    1,
+                                    &[opentelemetry::KeyValue::new("topic", Self::TOPIC_NAME)],
+                                );
+
+                                return;
+                            }
+                        };
+
+                        let result = match evalexpr::eval(operation_request.request()) {
+                            Ok(value) => value.to_string(),
+                            Err(err) => err.to_string(),
+                        };
+                        let operation = domain::operation::Operation::new(
+                            operation_request.job_id(),
+                            operation_request.operation_id(),
+                            operation_request.request(),
+                            result,
+                        );
+
+                        application_state
+                            .read()
+                            .await
+                            .message_producer()
+                            .send_operation_result(operation);
+
+                        if let Err(err) = consumer.store_offset_from_message(&message) {
+                            tracing::error!("Failed to store the offset from the message: {err}");
 
                             MESSAGE_ERROR_COUNTER.add(
                                 1,
                                 &[opentelemetry::KeyValue::new("topic", Self::TOPIC_NAME)],
                             );
-
-                            continue;
                         }
-                    };
-
-                    let result = match evalexpr::eval(operation_request.request()) {
-                        Ok(value) => value.to_string(),
-                        Err(err) => err.to_string(),
-                    };
-                    let operation = domain::operation::Operation::new(
-                        operation_request.job_id(),
-                        operation_request.operation_id(),
-                        operation_request.request(),
-                        result,
-                    );
-
-                    application_state
-                        .read()
-                        .await
-                        .message_producer()
-                        .send_operation_result(operation);
-
-                    if let Err(err) = consumer.store_offset_from_message(&message) {
-                        tracing::error!("Failed to store the offset from the message: {err}");
-
-                        MESSAGE_ERROR_COUNTER.add(
-                            1,
-                            &[opentelemetry::KeyValue::new("topic", Self::TOPIC_NAME)],
-                        );
                     }
+                    .instrument(span)
+                    .await;
                 }
                 Err(err) => {
                     tracing::error!("Kafka error: {err}");

@@ -93,53 +93,56 @@ impl MessageProducer {
         tokio::spawn(
             async move {
                 let span = tracing::info_span!("messaging.send", topic = Self::TOPIC_NAME);
-                let _enter = span.enter();
 
-                tracing::debug!("Sending operation result");
+                async {
+                    tracing::debug!("Sending operation result");
 
-                let operation_result = OperationResult::from(operation).to_string();
+                    let operation_result = OperationResult::from(operation).to_string();
 
-                let future_record: rdkafka::producer::FutureRecord<'_, str, _> =
-                    if should_instrument_kafka() {
-                        let mut context_injector = KafkaHeaderContextInjector::default();
-                        opentelemetry::global::get_text_map_propagator(|propagator| {
-                            let opentelemetry_context = span.context();
-                            propagator
-                                .inject_context(&opentelemetry_context, &mut context_injector);
-                        });
+                    let future_record: rdkafka::producer::FutureRecord<'_, str, _> =
+                        if should_instrument_kafka() {
+                            let mut context_injector = KafkaHeaderContextInjector::default();
+                            opentelemetry::global::get_text_map_propagator(|propagator| {
+                                let opentelemetry_context = tracing::Span::current().context();
+                                propagator
+                                    .inject_context(&opentelemetry_context, &mut context_injector);
+                            });
 
-                        let headers = rdkafka::message::OwnedHeaders::from(context_injector);
+                            let headers = rdkafka::message::OwnedHeaders::from(context_injector);
 
-                        rdkafka::producer::FutureRecord::to(Self::TOPIC_NAME)
-                            .payload(operation_result.as_str())
-                            .headers(headers)
+                            rdkafka::producer::FutureRecord::to(Self::TOPIC_NAME)
+                                .payload(operation_result.as_str())
+                                .headers(headers)
+                        } else {
+                            rdkafka::producer::FutureRecord::to(Self::TOPIC_NAME)
+                                .payload(operation_result.as_str())
+                        };
+
+                    if let Err(err) = producer
+                        .send(
+                            future_record,
+                            tokio::time::Duration::from_secs(Self::QUEUE_TIMEOUT),
+                        )
+                        .await
+                        .map_err(|(kafka_error, _borrowed_message)| kafka_error)
+                    {
+                        tracing::error!("Failed to send message to Kafka: {err}");
+
+                        MESSAGE_ERROR_COUNTER.add(
+                            1,
+                            &[opentelemetry::KeyValue::new("topic", Self::TOPIC_NAME)],
+                        );
                     } else {
-                        rdkafka::producer::FutureRecord::to(Self::TOPIC_NAME)
-                            .payload(operation_result.as_str())
-                    };
+                        tracing::debug!("Message sent to Kafka");
 
-                if let Err(err) = producer
-                    .send(
-                        future_record,
-                        tokio::time::Duration::from_secs(Self::QUEUE_TIMEOUT),
-                    )
-                    .await
-                    .map_err(|(kafka_error, _borrowed_message)| kafka_error)
-                {
-                    tracing::error!("Failed to send message to Kafka: {err}");
-
-                    MESSAGE_ERROR_COUNTER.add(
-                        1,
-                        &[opentelemetry::KeyValue::new("topic", Self::TOPIC_NAME)],
-                    );
-                } else {
-                    tracing::debug!("Message sent to Kafka");
-
-                    MESSAGE_SENT_COUNTER.add(
-                        1,
-                        &[opentelemetry::KeyValue::new("topic", Self::TOPIC_NAME)],
-                    );
+                        MESSAGE_SENT_COUNTER.add(
+                            1,
+                            &[opentelemetry::KeyValue::new("topic", Self::TOPIC_NAME)],
+                        );
+                    }
                 }
+                .instrument(span)
+                .await;
             }
             .instrument(parent_span),
         );
