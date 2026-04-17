@@ -1,7 +1,7 @@
 [workspace.package]
 authors = ["Jérémy Audiger"]
 edition = "2024"
-rust-version = "1.93"
+rust-version = "1.95"
 
 [workspace]
 members = [
