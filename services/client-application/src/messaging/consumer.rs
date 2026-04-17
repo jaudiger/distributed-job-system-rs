@@ -177,7 +177,7 @@ impl MessageConsumer {
                 Ok(message) => {
                     let span = tracing::info_span!("messaging.receive", topic = Self::TOPIC_NAME);
                     if should_instrument_kafka() {
-                        let _ = span.set_parent(opentelemetry::global::get_text_map_propagator(
+                        _ = span.set_parent(opentelemetry::global::get_text_map_propagator(
                             |propagator| {
                                 propagator
                                     .extract(&KafkaHeaderContextExtractor::new(message.headers()))

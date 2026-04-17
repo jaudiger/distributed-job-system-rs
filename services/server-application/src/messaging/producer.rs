@@ -97,7 +97,25 @@ impl MessageProducer {
                 async {
                     tracing::debug!("Sending operation result");
 
-                    let operation_result = OperationResult::from(operation).to_string();
+                    let operation_result =
+                        match serde_json::to_string(&OperationResult::from(operation)) {
+                            Ok(payload) => payload,
+                            Err(err) => {
+                                tracing::error!(
+                                    "Failed to serialize operation result: {err}"
+                                );
+
+                                MESSAGE_ERROR_COUNTER.add(
+                                    1,
+                                    &[opentelemetry::KeyValue::new(
+                                        "topic",
+                                        Self::TOPIC_NAME,
+                                    )],
+                                );
+
+                                return;
+                            }
+                        };
 
                     let future_record: rdkafka::producer::FutureRecord<'_, str, _> =
                         if should_instrument_kafka() {

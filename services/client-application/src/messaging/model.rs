@@ -1,24 +1,11 @@
 use crate::domain;
 use anyhow::Result;
-use core::fmt;
 
 #[derive(serde::Serialize)]
 pub struct OperationRequest {
     job_id: String,
     operation_id: String,
     request: String,
-}
-
-impl fmt::Display for OperationRequest {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let message_serialize = serde_json::to_string::<Self>(self);
-        match message_serialize {
-            Ok(c) => write!(f, "{c}"),
-            Err(_) => {
-                write!(f, "{}", String::default())
-            }
-        }
-    }
 }
 
 impl From<domain::operation::Operation> for OperationRequest {
