@@ -138,13 +138,9 @@ impl OperationRepository {
             .database(DatabaseClient::DATABASE_NAME)
             .collection(Self::COLLECTION_NAME);
 
-        let result = job_collection
+        let _ = job_collection
             .delete_many(doc! {Self::JOB_ID_FIELD: job_id.as_ref()})
             .await?;
-
-        if result.deleted_count == 0 {
-            anyhow::bail!("Document not found");
-        }
 
         Ok(())
     }
