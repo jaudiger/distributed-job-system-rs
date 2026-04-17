@@ -115,11 +115,12 @@ impl PageParams {
     const DEFAULT_PAGE: usize = 1;
     const DEFAULT_SIZE: usize = 30;
 
+    const MIN_PAGE: usize = 1;
     const MIN_SIZE: usize = 1;
     const MAX_SIZE: usize = 100;
 
     pub fn page(&self) -> usize {
-        self.page.unwrap_or(Self::DEFAULT_PAGE)
+        self.page.unwrap_or(Self::DEFAULT_PAGE).max(Self::MIN_PAGE)
     }
 
     pub fn size(&self) -> usize {
@@ -145,5 +146,55 @@ impl<T> PageResponse<T> {
             total,
             items,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PageParams;
+
+    #[test]
+    fn page_defaults_when_missing() {
+        // Arrange
+        let params = PageParams {
+            page: None,
+            size: None,
+        };
+
+        // Act
+        let page = params.page();
+
+        // Assert
+        assert_eq!(page, 1);
+    }
+
+    #[test]
+    fn page_clamps_zero_to_minimum() {
+        // Arrange
+        let params = PageParams {
+            page: Some(0),
+            size: None,
+        };
+
+        // Act
+        let page = params.page();
+
+        // Assert
+        assert_eq!(page, 1);
+    }
+
+    #[test]
+    fn page_passes_through_in_range_value() {
+        // Arrange
+        let params = PageParams {
+            page: Some(7),
+            size: None,
+        };
+
+        // Act
+        let page = params.page();
+
+        // Assert
+        assert_eq!(page, 7);
     }
 }
