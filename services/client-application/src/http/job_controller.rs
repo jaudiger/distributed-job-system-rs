@@ -47,6 +47,12 @@ impl JobController {
         CREATE_JOB_COUNTER.add(1, &[]);
 
         let lines = body.lines().count();
+        if lines == 0 {
+            return Err(ErrorResponse::bad_request(
+                "Request body must contain at least one operation",
+            ));
+        }
+
         let new_job = domain::job::Job::new_job(lines);
 
         let job_id = state
