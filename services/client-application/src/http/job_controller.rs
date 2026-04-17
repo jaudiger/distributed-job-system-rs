@@ -1,5 +1,5 @@
-use crate::application::APPLICATION_NAME;
 use crate::application::context::SharedApplicationState;
+use crate::application::counter;
 use crate::domain;
 use crate::http;
 use crate::http::model::PageParams;
@@ -11,36 +11,28 @@ use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use std::sync::LazyLock;
 use tracing::Instrument as _;
 
-static CREATE_JOB_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> = LazyLock::new(|| {
-    opentelemetry::global::meter(APPLICATION_NAME)
-        .u64_counter("http_server_create_job_requests")
-        .with_description("Number of create job requests")
-        .build()
-});
-
-static DELETE_JOB_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> = LazyLock::new(|| {
-    opentelemetry::global::meter(APPLICATION_NAME)
-        .u64_counter("http_server_delete_job_requests")
-        .with_description("Number of delete job requests")
-        .build()
-});
-
-static GET_JOB_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> = LazyLock::new(|| {
-    opentelemetry::global::meter(APPLICATION_NAME)
-        .u64_counter("http_server_get_job_requests")
-        .with_description("Number of get job requests")
-        .build()
-});
-
-static GET_JOBS_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> = LazyLock::new(|| {
-    opentelemetry::global::meter(APPLICATION_NAME)
-        .u64_counter("http_server_get_jobs_requests")
-        .with_description("Number of get jobs requests")
-        .build()
-});
+counter!(
+    CREATE_JOB_COUNTER,
+    "http_server_create_job_requests",
+    "Number of create job requests"
+);
+counter!(
+    DELETE_JOB_COUNTER,
+    "http_server_delete_job_requests",
+    "Number of delete job requests"
+);
+counter!(
+    GET_JOB_COUNTER,
+    "http_server_get_job_requests",
+    "Number of get job requests"
+);
+counter!(
+    GET_JOBS_COUNTER,
+    "http_server_get_jobs_requests",
+    "Number of get jobs requests"
+);
 
 pub struct JobController;
 

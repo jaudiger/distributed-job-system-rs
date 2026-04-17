@@ -1,4 +1,4 @@
-use crate::application::APPLICATION_NAME;
+use crate::application::counter;
 use crate::database;
 use crate::database::database_client::DatabaseClient;
 use crate::domain;
@@ -10,71 +10,47 @@ use mongodb::Collection;
 use mongodb::IndexModel;
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
-use std::sync::LazyLock;
 
-static INSERT_OPERATION_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> =
-    LazyLock::new(|| {
-        opentelemetry::global::meter(APPLICATION_NAME)
-            .u64_counter("database_insert_operation_requests")
-            .with_description("Number of insert operation requests")
-            .build()
-    });
-
-static INSERT_OPERATIONS_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> =
-    LazyLock::new(|| {
-        opentelemetry::global::meter(APPLICATION_NAME)
-            .u64_counter("database_insert_operations_requests")
-            .with_description("Number of insert operations requests")
-            .build()
-    });
-
-static DELETE_OPERATIONS_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> =
-    LazyLock::new(|| {
-        opentelemetry::global::meter(APPLICATION_NAME)
-            .u64_counter("database_delete_operations_requests")
-            .with_description("Number of delete operations requests")
-            .build()
-    });
-
-static GET_OPERATION_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> =
-    LazyLock::new(|| {
-        opentelemetry::global::meter(APPLICATION_NAME)
-            .u64_counter("database_get_operation_requests")
-            .with_description("Number of get operation requests")
-            .build()
-    });
-
-static GET_TOTAL_COMPLETED_OPERATIONS_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> =
-    LazyLock::new(|| {
-        opentelemetry::global::meter(APPLICATION_NAME)
-            .u64_counter("database_get_total_completed_operations_requests")
-            .with_description("Number of get total completed operations requests")
-            .build()
-    });
-
-static GET_OPERATIONS_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> =
-    LazyLock::new(|| {
-        opentelemetry::global::meter(APPLICATION_NAME)
-            .u64_counter("database_get_operations_requests")
-            .with_description("Number of get operations requests")
-            .build()
-    });
-
-static GET_BATCH_OPERATIONS_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> =
-    LazyLock::new(|| {
-        opentelemetry::global::meter(APPLICATION_NAME)
-            .u64_counter("database_get_batch_operations_requests")
-            .with_description("Number of get batch operations requests")
-            .build()
-    });
-
-static UPDATE_OPERATION_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> =
-    LazyLock::new(|| {
-        opentelemetry::global::meter(APPLICATION_NAME)
-            .u64_counter("database_update_operation_requests")
-            .with_description("Number of update operation requests")
-            .build()
-    });
+counter!(
+    INSERT_OPERATION_COUNTER,
+    "database_insert_operation_requests",
+    "Number of insert operation requests"
+);
+counter!(
+    INSERT_OPERATIONS_COUNTER,
+    "database_insert_operations_requests",
+    "Number of insert operations requests"
+);
+counter!(
+    DELETE_OPERATIONS_COUNTER,
+    "database_delete_operations_requests",
+    "Number of delete operations requests"
+);
+counter!(
+    GET_OPERATION_COUNTER,
+    "database_get_operation_requests",
+    "Number of get operation requests"
+);
+counter!(
+    GET_TOTAL_COMPLETED_OPERATIONS_COUNTER,
+    "database_get_total_completed_operations_requests",
+    "Number of get total completed operations requests"
+);
+counter!(
+    GET_OPERATIONS_COUNTER,
+    "database_get_operations_requests",
+    "Number of get operations requests"
+);
+counter!(
+    GET_BATCH_OPERATIONS_COUNTER,
+    "database_get_batch_operations_requests",
+    "Number of get batch operations requests"
+);
+counter!(
+    UPDATE_OPERATION_COUNTER,
+    "database_update_operation_requests",
+    "Number of update operation requests"
+);
 
 pub struct OperationRepository {
     client: Client,

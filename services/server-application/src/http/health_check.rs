@@ -1,15 +1,13 @@
-use crate::application::APPLICATION_NAME;
+use crate::application::counter;
 use crate::http::model::HealthCheckResponse;
 use axum::Json;
 use axum::response::IntoResponse;
-use std::sync::LazyLock;
 
-static HEALTH_CHECK_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> = LazyLock::new(|| {
-    opentelemetry::global::meter(APPLICATION_NAME)
-        .u64_counter("http_server_health_check_requests")
-        .with_description("Number of health check requests")
-        .build()
-});
+counter!(
+    HEALTH_CHECK_COUNTER,
+    "http_server_health_check_requests",
+    "Number of health check requests"
+);
 
 pub struct HealthCheckController;
 

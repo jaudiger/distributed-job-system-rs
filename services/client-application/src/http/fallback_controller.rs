@@ -1,15 +1,13 @@
-use crate::application::APPLICATION_NAME;
+use crate::application::counter;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::response::IntoResponse;
-use std::sync::LazyLock;
 
-static FALLBACK_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> = LazyLock::new(|| {
-    opentelemetry::global::meter(APPLICATION_NAME)
-        .u64_counter("http_server_fallback_requests")
-        .with_description("Number of fallback requests")
-        .build()
-});
+counter!(
+    FALLBACK_COUNTER,
+    "http_server_fallback_requests",
+    "Number of fallback requests"
+);
 
 pub struct FallbackController;
 

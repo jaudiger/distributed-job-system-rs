@@ -1,4 +1,4 @@
-use crate::application::APPLICATION_NAME;
+use crate::application::counter;
 use crate::database;
 use crate::database::database_client::DatabaseClient;
 use crate::domain;
@@ -8,35 +8,27 @@ use mongodb::Client;
 use mongodb::Collection;
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
-use std::sync::LazyLock;
 
-static INSERT_JOB_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> = LazyLock::new(|| {
-    opentelemetry::global::meter(APPLICATION_NAME)
-        .u64_counter("database_insert_job_requests")
-        .with_description("Number of insert job requests")
-        .build()
-});
-
-static DELETE_JOB_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> = LazyLock::new(|| {
-    opentelemetry::global::meter(APPLICATION_NAME)
-        .u64_counter("database_delete_job_requests")
-        .with_description("Number of delete job requests")
-        .build()
-});
-
-static GET_JOB_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> = LazyLock::new(|| {
-    opentelemetry::global::meter(APPLICATION_NAME)
-        .u64_counter("database_get_job_requests")
-        .with_description("Number of get job requests")
-        .build()
-});
-
-static GET_JOBS_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> = LazyLock::new(|| {
-    opentelemetry::global::meter(APPLICATION_NAME)
-        .u64_counter("database_get_jobs_requests")
-        .with_description("Number of get jobs requests")
-        .build()
-});
+counter!(
+    INSERT_JOB_COUNTER,
+    "database_insert_job_requests",
+    "Number of insert job requests"
+);
+counter!(
+    DELETE_JOB_COUNTER,
+    "database_delete_job_requests",
+    "Number of delete job requests"
+);
+counter!(
+    GET_JOB_COUNTER,
+    "database_get_job_requests",
+    "Number of get job requests"
+);
+counter!(
+    GET_JOBS_COUNTER,
+    "database_get_jobs_requests",
+    "Number of get jobs requests"
+);
 
 pub struct JobRepository {
     client: Client,

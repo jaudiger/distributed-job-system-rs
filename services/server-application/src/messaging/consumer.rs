@@ -1,5 +1,5 @@
-use crate::application::APPLICATION_NAME;
 use crate::application::context::SharedApplicationState;
+use crate::application::counter;
 use crate::domain;
 use crate::messaging::opentelemetry::KafkaHeaderContextExtractor;
 use crate::messaging::opentelemetry::should_instrument_kafka;
@@ -7,24 +7,19 @@ use anyhow::Result;
 use rdkafka::Message as _;
 use rdkafka::consumer::Consumer as _;
 use std::sync::Arc;
-use std::sync::LazyLock;
 use tokio::task::JoinHandle;
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
-static MESSAGE_RECEIVED_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> =
-    LazyLock::new(|| {
-        opentelemetry::global::meter(APPLICATION_NAME)
-            .u64_counter("consumer_messages_received")
-            .with_description("Number of messages received by the Kafka consumer")
-            .build()
-    });
-static MESSAGE_ERROR_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> =
-    LazyLock::new(|| {
-        opentelemetry::global::meter(APPLICATION_NAME)
-            .u64_counter("consumer_messages_error")
-            .with_description("Number of messages that encountered an error by the Kafka consumer")
-            .build()
-    });
+counter!(
+    MESSAGE_RECEIVED_COUNTER,
+    "consumer_messages_received",
+    "Number of messages received by the Kafka consumer"
+);
+counter!(
+    MESSAGE_ERROR_COUNTER,
+    "consumer_messages_error",
+    "Number of messages that encountered an error by the Kafka consumer"
+);
 
 #[derive(Default)]
 pub struct KafkaConsumerContext;

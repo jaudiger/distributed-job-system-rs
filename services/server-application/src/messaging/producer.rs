@@ -1,6 +1,4 @@
-use std::sync::LazyLock;
-
-use crate::application::APPLICATION_NAME;
+use crate::application::counter;
 use crate::domain;
 use crate::messaging::model::OperationResult;
 use crate::messaging::opentelemetry::KafkaHeaderContextInjector;
@@ -9,19 +7,16 @@ use anyhow::Result;
 use tracing::Instrument as _;
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
-static MESSAGE_SENT_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> = LazyLock::new(|| {
-    opentelemetry::global::meter(APPLICATION_NAME)
-        .u64_counter("producer_messages_sent")
-        .with_description("Number of messages sent by the Kafka producer")
-        .build()
-});
-static MESSAGE_ERROR_COUNTER: LazyLock<opentelemetry::metrics::Counter<u64>> =
-    LazyLock::new(|| {
-        opentelemetry::global::meter(APPLICATION_NAME)
-            .u64_counter("producer_messages_error")
-            .with_description("Number of messages that encountered an error by the Kafka producer")
-            .build()
-    });
+counter!(
+    MESSAGE_SENT_COUNTER,
+    "producer_messages_sent",
+    "Number of messages sent by the Kafka producer"
+);
+counter!(
+    MESSAGE_ERROR_COUNTER,
+    "producer_messages_error",
+    "Number of messages that encountered an error by the Kafka producer"
+);
 
 #[derive(Default)]
 struct KafkaProducerContext;
