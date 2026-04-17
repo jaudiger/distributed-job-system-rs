@@ -12,6 +12,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
+use tokio_util::sync::CancellationToken;
 use tower_http::trace::DefaultMakeSpan;
 use tower_http::trace::TraceLayer;
 
@@ -33,20 +34,23 @@ impl HttpServer {
         }
     }
 
-    pub fn start(&self) -> Vec<JoinHandle<()>> {
+    pub fn start(&self, shutdown: &CancellationToken) -> Vec<JoinHandle<Result<()>>> {
         tracing::info!("Starting the HTTP server on port {}", self.port);
 
         let port = self.port;
         let application_state = self.application_state.clone();
+        let shutdown = shutdown.clone();
 
         vec![tokio::spawn(async move {
-            let () = Self::worker_axum(port, application_state)
-                .await
-                .expect("Failed to start Axum server");
+            Self::worker_axum(port, application_state, shutdown).await
         })]
     }
 
-    async fn worker_axum(port: u16, application_state: SharedApplicationState) -> Result<()> {
+    async fn worker_axum(
+        port: u16,
+        application_state: SharedApplicationState,
+        shutdown: CancellationToken,
+    ) -> Result<()> {
         let trace_layer =
             TraceLayer::new_for_http().make_span_with(DefaultMakeSpan::new().include_headers(true));
 
@@ -83,7 +87,9 @@ impl HttpServer {
 
         tracing::info!("Starting HTTP Server on {}", listener.local_addr()?);
 
-        axum::serve(listener, router).await?;
+        axum::serve(listener, router)
+            .with_graceful_shutdown(async move { shutdown.cancelled().await })
+            .await?;
 
         Ok(())
     }

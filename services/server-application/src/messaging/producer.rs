@@ -101,16 +101,11 @@ impl MessageProducer {
                         match serde_json::to_string(&OperationResult::from(operation)) {
                             Ok(payload) => payload,
                             Err(err) => {
-                                tracing::error!(
-                                    "Failed to serialize operation result: {err}"
-                                );
+                                tracing::error!("Failed to serialize operation result: {err}");
 
                                 MESSAGE_ERROR_COUNTER.add(
                                     1,
-                                    &[opentelemetry::KeyValue::new(
-                                        "topic",
-                                        Self::TOPIC_NAME,
-                                    )],
+                                    &[opentelemetry::KeyValue::new("topic", Self::TOPIC_NAME)],
                                 );
 
                                 return;

@@ -8,6 +8,7 @@ use rdkafka::Message as _;
 use rdkafka::consumer::Consumer as _;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
+use tokio_util::sync::CancellationToken;
 use tracing::Instrument as _;
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
@@ -105,7 +106,7 @@ impl MessageConsumer {
         })
     }
 
-    pub fn start(&self) -> Vec<JoinHandle<()>> {
+    pub fn start(&self, shutdown: &CancellationToken) -> Vec<JoinHandle<Result<()>>> {
         tracing::debug!("Start the Kafka consumer");
 
         self.consumers
@@ -113,9 +114,11 @@ impl MessageConsumer {
             .map(|consumer| {
                 let consumer_cloned = Arc::clone(consumer);
                 let application_state = Arc::clone(&self.application_state);
+                let shutdown = shutdown.clone();
 
                 tokio::spawn(async move {
-                    Self::worker_consumer(consumer_cloned, application_state).await;
+                    Self::worker_consumer(consumer_cloned, application_state, shutdown).await;
+                    Ok(())
                 })
             })
             .collect()
@@ -172,9 +175,14 @@ impl MessageConsumer {
     async fn worker_consumer(
         consumer: Arc<KafkaConsumer>,
         application_state: SharedApplicationState,
+        shutdown: CancellationToken,
     ) {
         loop {
-            match consumer.recv().await {
+            let received = tokio::select! {
+                () = shutdown.cancelled() => return,
+                result = consumer.recv() => result,
+            };
+            match received {
                 Ok(message) => {
                     let span = tracing::info_span!("messaging.receive", topic = Self::TOPIC_NAME);
                     if should_instrument_kafka() {
