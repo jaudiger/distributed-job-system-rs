@@ -87,10 +87,8 @@ impl OpentelemetryHandler {
             ])
             .build()
     }
-}
 
-impl Drop for OpentelemetryHandler {
-    fn drop(&mut self) {
+    pub fn shutdown(self) {
         if let Err(err) = self.tracer_provider.shutdown() {
             eprintln!("{err:?}");
         }
