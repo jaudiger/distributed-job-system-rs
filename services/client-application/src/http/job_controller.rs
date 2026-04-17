@@ -73,13 +73,20 @@ impl JobController {
         {
             tracing::error!("Failed to insert operations: {err}");
 
-            let () = state
+            if let Err(rollback_err) = state
                 .read()
                 .await
                 .database_client()
                 .job_repository()
                 .delete_job(&job_id)
-                .await?;
+                .await
+            {
+                tracing::error!(
+                    "Failed to roll back job {job_id} after insert_operations error: {rollback_err}"
+                );
+            }
+
+            return Err(err.into());
         }
 
         // Send operation request message asynchronously
