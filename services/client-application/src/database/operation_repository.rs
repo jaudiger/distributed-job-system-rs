@@ -1,11 +1,9 @@
 use crate::application::counter;
 use crate::database;
-use crate::database::database_client::DatabaseClient;
 use crate::domain;
 use anyhow::Result;
 use futures::Future;
 use futures::TryStreamExt;
-use mongodb::Client;
 use mongodb::Collection;
 use mongodb::IndexModel;
 use mongodb::bson::doc;
@@ -53,35 +51,30 @@ counter!(
 );
 
 pub struct OperationRepository {
-    client: Client,
+    collection: Collection<domain::operation::Operation>,
 }
 
 impl OperationRepository {
-    const COLLECTION_NAME: &'static str = "operation";
+    pub const COLLECTION_NAME: &'static str = "operation";
 
     const ID_FIELD: &'static str = "_id";
     const JOB_ID_FIELD: &'static str = "job_id";
     const RESULT_FIELD: &'static str = "result";
 
-    pub async fn new(client: Client) -> Result<Self> {
+    pub async fn new(collection: Collection<domain::operation::Operation>) -> Result<Self> {
         tracing::debug!("Initializing the MongoDB operation repository");
 
-        let operation_collection: Collection<domain::operation::Operation> = client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
-        // Create the indexes
         let job_id_index = IndexModel::builder()
             .keys(doc! { Self::JOB_ID_FIELD: 1 })
             .build();
-        let _ = operation_collection.create_index(job_id_index).await?;
+        let _ = collection.create_index(job_id_index).await?;
 
         let result_index = IndexModel::builder()
             .keys(doc! { Self::RESULT_FIELD: 1 })
             .build();
-        let _ = operation_collection.create_index(result_index).await?;
+        let _ = collection.create_index(result_index).await?;
 
-        Ok(Self { client })
+        Ok(Self { collection })
     }
 
     #[allow(unused)]
@@ -94,12 +87,7 @@ impl OperationRepository {
 
         INSERT_OPERATION_COUNTER.add(1, &[]);
 
-        let operation_collection: Collection<domain::operation::Operation> = self
-            .client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
-        let result = operation_collection.insert_one(new_operation).await?;
+        let result = self.collection.insert_one(new_operation).await?;
 
         Ok(result
             .inserted_id
@@ -117,12 +105,7 @@ impl OperationRepository {
 
         INSERT_OPERATIONS_COUNTER.add(1, &[]);
 
-        let operation_collection: Collection<domain::operation::Operation> = self
-            .client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
-        let _ = operation_collection.insert_many(new_operation).await?;
+        let _ = self.collection.insert_many(new_operation).await?;
 
         Ok(())
     }
@@ -133,12 +116,8 @@ impl OperationRepository {
 
         DELETE_OPERATIONS_COUNTER.add(1, &[]);
 
-        let job_collection: Collection<domain::operation::Operation> = self
-            .client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
-        let _ = job_collection
+        let _ = self
+            .collection
             .delete_many(doc! {Self::JOB_ID_FIELD: job_id.as_ref()})
             .await?;
 
@@ -159,12 +138,8 @@ impl OperationRepository {
 
         GET_OPERATION_COUNTER.add(1, &[]);
 
-        let operation_collection: Collection<domain::operation::Operation> = self
-            .client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
-        let result = operation_collection
+        let result = self
+            .collection
             .find_one(doc! {
                 Self::ID_FIELD: ObjectId::parse_str(operation_id)?,
                 Self::JOB_ID_FIELD: job_id.as_ref()
@@ -190,12 +165,8 @@ impl OperationRepository {
 
         GET_TOTAL_COMPLETED_OPERATIONS_COUNTER.add(1, &[]);
 
-        let operation_collection: Collection<domain::operation::Operation> = self
-            .client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
-        let result = operation_collection
+        let result = self
+            .collection
             .count_documents(doc! {
                 Self::JOB_ID_FIELD: job_id.as_ref(),
                 Self::RESULT_FIELD: { "$exists": true, "$ne": "" }
@@ -216,16 +187,12 @@ impl OperationRepository {
 
         GET_OPERATIONS_COUNTER.add(1, &[]);
 
-        let operation_collection: Collection<domain::operation::Operation> = self
-            .client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
         let skip = ((page - 1) * page_size) as u64;
         let filter = doc! {Self::JOB_ID_FIELD: job_id.as_ref()};
 
         #[allow(clippy::cast_possible_wrap)]
-        let mut cursor = operation_collection
+        let mut cursor = self
+            .collection
             .find(filter.clone())
             .limit(page_size as i64)
             .skip(skip)
@@ -236,7 +203,8 @@ impl OperationRepository {
             operations.push(doc);
         }
 
-        let total = operation_collection
+        let total = self
+            .collection
             .count_documents(filter)
             .await
             .map(usize::try_from)??;
@@ -259,12 +227,8 @@ impl OperationRepository {
 
         GET_BATCH_OPERATIONS_COUNTER.add(1, &[]);
 
-        let operation_collection: Collection<domain::operation::Operation> = self
-            .client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
-        let cursor = operation_collection
+        let cursor = self
+            .collection
             .find(doc! { Self::JOB_ID_FIELD: job_id.as_ref() })
             .batch_size(batch_size)
             .await?;
@@ -297,12 +261,8 @@ impl OperationRepository {
 
         UPDATE_OPERATION_COUNTER.add(1, &[]);
 
-        let operation_collection: Collection<domain::operation::Operation> = self
-            .client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
-        let result = operation_collection
+        let result = self
+            .collection
             .update_one(
                 doc! {
                     Self::ID_FIELD: ObjectId::parse_str(operation_id)?,

@@ -1,10 +1,8 @@
 use crate::application::counter;
 use crate::database;
-use crate::database::database_client::DatabaseClient;
 use crate::domain;
 use anyhow::Result;
 use futures::TryStreamExt;
-use mongodb::Client;
 use mongodb::Collection;
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
@@ -31,18 +29,18 @@ counter!(
 );
 
 pub struct JobRepository {
-    client: Client,
+    collection: Collection<domain::job::Job>,
 }
 
 impl JobRepository {
-    const COLLECTION_NAME: &'static str = "job";
+    pub const COLLECTION_NAME: &'static str = "job";
 
     const ID_FIELD: &'static str = "_id";
 
-    pub fn new(client: Client) -> Self {
+    pub fn new(collection: Collection<domain::job::Job>) -> Self {
         tracing::debug!("Initializing the MongoDB job repository");
 
-        Self { client }
+        Self { collection }
     }
 
     #[tracing::instrument(skip(self))]
@@ -51,12 +49,7 @@ impl JobRepository {
 
         INSERT_JOB_COUNTER.add(1, &[]);
 
-        let job_collection: Collection<domain::job::Job> = self
-            .client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
-        let result = job_collection.insert_one(job).await?;
+        let result = self.collection.insert_one(job).await?;
 
         Ok(result
             .inserted_id
@@ -71,12 +64,8 @@ impl JobRepository {
 
         DELETE_JOB_COUNTER.add(1, &[]);
 
-        let job_collection: Collection<domain::job::Job> = self
-            .client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
-        let result = job_collection
+        let result = self
+            .collection
             .delete_one(doc! {Self::ID_FIELD: ObjectId::parse_str(job_id)?})
             .await?;
 
@@ -96,12 +85,8 @@ impl JobRepository {
 
         GET_JOB_COUNTER.add(1, &[]);
 
-        let job_collection: Collection<domain::job::Job> = self
-            .client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
-        let result = job_collection
+        let result = self
+            .collection
             .find_one(doc! {Self::ID_FIELD: ObjectId::parse_str(job_id)?})
             .await?;
 
@@ -122,16 +107,12 @@ impl JobRepository {
 
         GET_JOBS_COUNTER.add(1, &[]);
 
-        let job_collection: Collection<domain::job::Job> = self
-            .client
-            .database(DatabaseClient::DATABASE_NAME)
-            .collection(Self::COLLECTION_NAME);
-
         let skip = ((page - 1) * page_size) as u64;
         let filter = doc! {};
 
         #[allow(clippy::cast_possible_wrap)]
-        let mut cursor = job_collection
+        let mut cursor = self
+            .collection
             .find(filter.clone())
             .limit(page_size as i64)
             .skip(skip)
@@ -142,7 +123,8 @@ impl JobRepository {
             jobs.push(doc);
         }
 
-        let total = job_collection
+        let total = self
+            .collection
             .count_documents(filter)
             .await
             .map(usize::try_from)??;

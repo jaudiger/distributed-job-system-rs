@@ -13,7 +13,7 @@ impl DatabaseClient {
     const DEFAULT_MONGODB_URI: &str =
         "mongodb://user:password@127.0.0.1:27017/?authSource=application";
 
-    pub const DATABASE_NAME: &'static str = "application";
+    const DATABASE_NAME: &'static str = "application";
 
     #[allow(clippy::similar_names)]
     pub async fn new() -> Result<Self> {
@@ -25,8 +25,11 @@ impl DatabaseClient {
             .expect("Failed to parse MongoDB URI");
         client.warm_connection_pool().await;
 
-        let job_repository = JobRepository::new(client.clone());
-        let operation_repository = OperationRepository::new(client).await?;
+        let database = client.database(Self::DATABASE_NAME);
+        let job_repository = JobRepository::new(database.collection(JobRepository::COLLECTION_NAME));
+        let operation_repository =
+            OperationRepository::new(database.collection(OperationRepository::COLLECTION_NAME))
+                .await?;
 
         Ok(Self {
             job_repository,
