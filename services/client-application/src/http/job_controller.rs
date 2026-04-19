@@ -56,8 +56,6 @@ impl JobController {
         let new_job = domain::job::Job::new_job(lines);
 
         let job_id = state
-            .read()
-            .await
             .database_client()
             .job_repository()
             .insert_job(&new_job)
@@ -70,8 +68,6 @@ impl JobController {
 
         // Add the operations to the database
         if let Err(err) = state
-            .read()
-            .await
             .database_client()
             .operation_repository()
             .insert_operations(&new_operations)
@@ -80,8 +76,6 @@ impl JobController {
             tracing::error!("Failed to insert operations: {err}");
 
             if let Err(rollback_err) = state
-                .read()
-                .await
                 .database_client()
                 .job_repository()
                 .delete_job(&job_id)
@@ -104,8 +98,6 @@ impl JobController {
                 const CHUNK_SIZE: u32 = 128;
 
                 if let Err(err) = state_cloned
-                    .read()
-                    .await
                     .database_client()
                     .operation_repository()
                     .get_batch_operations(
@@ -115,8 +107,6 @@ impl JobController {
                             let state_cloned = state.clone();
                             async move {
                                 state_cloned
-                                    .read()
-                                    .await
                                     .message_producer()
                                     .send_operation_request(operation);
                             }
@@ -148,8 +138,6 @@ impl JobController {
         DELETE_JOB_COUNTER.add(1, &[]);
 
         let () = state
-            .read()
-            .await
             .database_client()
             .job_repository()
             .delete_job(&job_id)
@@ -161,8 +149,6 @@ impl JobController {
         tokio::spawn(
             async move {
                 if let Err(err) = state_cloned
-                    .read()
-                    .await
                     .database_client()
                     .operation_repository()
                     .delete_operations(&job_id)
@@ -187,16 +173,12 @@ impl JobController {
         GET_JOB_COUNTER.add(1, &[]);
 
         let job = state
-            .read()
-            .await
             .database_client()
             .job_repository()
             .get_job(&job_id)
             .await?;
 
         let total_completed_operations = state
-            .read()
-            .await
             .database_client()
             .operation_repository()
             .get_total_completed_operations(job_id)
@@ -221,8 +203,6 @@ impl JobController {
         let page_size = params.size();
 
         let jobs = state
-            .read()
-            .await
             .database_client()
             .job_repository()
             .get_jobs(page, page_size)

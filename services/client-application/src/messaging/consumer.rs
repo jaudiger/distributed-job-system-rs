@@ -1,5 +1,5 @@
-use crate::application::context::SharedApplicationState;
 use crate::application::counter;
+use crate::database::database_client::DatabaseClient;
 use crate::messaging::opentelemetry::KafkaHeaderContextExtractor;
 use crate::messaging::opentelemetry::should_instrument_kafka;
 use anyhow::Result;
@@ -55,7 +55,7 @@ pub type KafkaConsumer = rdkafka::consumer::StreamConsumer<KafkaConsumerContext>
 
 pub struct MessageConsumer {
     consumers: Vec<Arc<KafkaConsumer>>,
-    application_state: SharedApplicationState,
+    database_client: Arc<DatabaseClient>,
 }
 
 impl MessageConsumer {
@@ -84,7 +84,7 @@ impl MessageConsumer {
     const KAFKA_CONFIG_RECONNECT_BACKOFF_MAX_MS_DEFAULT_VALUE: &str = "15000";
     const KAFKA_CONFIG_RECONNECT_BACKOFF_MS_DEFAULT_VALUE: &str = "5000";
 
-    pub fn new(application_state: SharedApplicationState) -> Result<Self> {
+    pub fn new(database_client: Arc<DatabaseClient>) -> Result<Self> {
         tracing::debug!("Initializing the Kafka consumer");
 
         let kafka_uri = std::env::var(Self::KAFKA_URI_ENV_VAR)
@@ -101,7 +101,7 @@ impl MessageConsumer {
 
         Ok(Self {
             consumers,
-            application_state,
+            database_client,
         })
     }
 
@@ -112,11 +112,11 @@ impl MessageConsumer {
             .iter()
             .map(|consumer| {
                 let consumer_cloned = Arc::clone(consumer);
-                let application_state = Arc::clone(&self.application_state);
+                let database_client = Arc::clone(&self.database_client);
                 let shutdown = shutdown.clone();
 
                 tokio::spawn(async move {
-                    Self::worker_consumer(consumer_cloned, application_state, shutdown).await;
+                    Self::worker_consumer(consumer_cloned, database_client, shutdown).await;
                     Ok(())
                 })
             })
@@ -173,7 +173,7 @@ impl MessageConsumer {
 
     async fn worker_consumer(
         consumer: Arc<KafkaConsumer>,
-        application_state: SharedApplicationState,
+        database_client: Arc<DatabaseClient>,
         shutdown: CancellationToken,
     ) {
         loop {
@@ -243,10 +243,7 @@ impl MessageConsumer {
                             }
                         };
 
-                        if let Err(err) = application_state
-                            .read()
-                            .await
-                            .database_client()
+                        if let Err(err) = database_client
                             .operation_repository()
                             .update_operation(
                                 operation_result.job_id(),

@@ -9,7 +9,6 @@ use axum::extract::DefaultBodyLimit;
 use axum::handler::Handler;
 use axum::routing::get;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
@@ -18,27 +17,26 @@ use tower_http::trace::TraceLayer;
 
 pub struct HttpServer {
     port: u16,
-    application_state: SharedApplicationState,
 }
 
 impl HttpServer {
     const DEFAULT_LISTENER_ADDR: [u8; 4] = [0, 0, 0, 0];
     const BODY_LIMIT: DefaultBodyLimit = DefaultBodyLimit::max(10 * 1024 * 1024); // 10MB
 
-    pub fn new(port: u16, application_state: SharedApplicationState) -> Self {
+    pub fn new(port: u16) -> Self {
         tracing::debug!("Initializing the HTTP server");
 
-        Self {
-            port,
-            application_state,
-        }
+        Self { port }
     }
 
-    pub fn start(&self, shutdown: &CancellationToken) -> Vec<JoinHandle<Result<()>>> {
+    pub fn start(
+        &self,
+        application_state: SharedApplicationState,
+        shutdown: &CancellationToken,
+    ) -> Vec<JoinHandle<Result<()>>> {
         tracing::info!("Starting the HTTP server on port {}", self.port);
 
         let port = self.port;
-        let application_state = self.application_state.clone();
         let shutdown = shutdown.clone();
 
         vec![tokio::spawn(async move {
@@ -80,7 +78,7 @@ impl HttpServer {
             )
             .fallback(FallbackController::fallback_endpoint_handler)
             .layer(trace_layer)
-            .with_state(Arc::clone(&application_state));
+            .with_state(application_state);
 
         let addr = SocketAddr::from((Self::DEFAULT_LISTENER_ADDR, port));
         let listener = TcpListener::bind(addr).await?;

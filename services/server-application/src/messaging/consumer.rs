@@ -1,8 +1,8 @@
-use crate::application::context::SharedApplicationState;
 use crate::application::counter;
 use crate::domain;
 use crate::messaging::opentelemetry::KafkaHeaderContextExtractor;
 use crate::messaging::opentelemetry::should_instrument_kafka;
+use crate::messaging::producer::MessageProducer;
 use anyhow::Result;
 use rdkafka::Message as _;
 use rdkafka::consumer::Consumer as _;
@@ -56,7 +56,7 @@ pub type KafkaConsumer = rdkafka::consumer::StreamConsumer<KafkaConsumerContext>
 
 pub struct MessageConsumer {
     consumers: Vec<Arc<KafkaConsumer>>,
-    application_state: SharedApplicationState,
+    message_producer: Arc<MessageProducer>,
 }
 
 impl MessageConsumer {
@@ -85,7 +85,7 @@ impl MessageConsumer {
     const KAFKA_CONFIG_RECONNECT_BACKOFF_MAX_MS_DEFAULT_VALUE: &str = "15000";
     const KAFKA_CONFIG_RECONNECT_BACKOFF_MS_DEFAULT_VALUE: &str = "5000";
 
-    pub fn new(application_state: SharedApplicationState) -> Result<Self> {
+    pub fn new(message_producer: Arc<MessageProducer>) -> Result<Self> {
         tracing::debug!("Initializing the Kafka consumer");
 
         let kafka_uri = std::env::var(Self::KAFKA_URI_ENV_VAR)
@@ -102,7 +102,7 @@ impl MessageConsumer {
 
         Ok(Self {
             consumers,
-            application_state,
+            message_producer,
         })
     }
 
@@ -113,11 +113,11 @@ impl MessageConsumer {
             .iter()
             .map(|consumer| {
                 let consumer_cloned = Arc::clone(consumer);
-                let application_state = Arc::clone(&self.application_state);
+                let message_producer = Arc::clone(&self.message_producer);
                 let shutdown = shutdown.clone();
 
                 tokio::spawn(async move {
-                    Self::worker_consumer(consumer_cloned, application_state, shutdown).await;
+                    Self::worker_consumer(consumer_cloned, message_producer, shutdown).await;
                     Ok(())
                 })
             })
@@ -174,7 +174,7 @@ impl MessageConsumer {
 
     async fn worker_consumer(
         consumer: Arc<KafkaConsumer>,
-        application_state: SharedApplicationState,
+        message_producer: Arc<MessageProducer>,
         shutdown: CancellationToken,
     ) {
         loop {
@@ -255,11 +255,7 @@ impl MessageConsumer {
                             result,
                         );
 
-                        application_state
-                            .read()
-                            .await
-                            .message_producer()
-                            .send_operation_result(operation);
+                        message_producer.send_operation_result(operation);
 
                         if let Err(err) = consumer.store_offset_from_message(&message) {
                             tracing::error!("Failed to store the offset from the message: {err}");

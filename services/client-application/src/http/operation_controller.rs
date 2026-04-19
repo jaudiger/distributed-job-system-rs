@@ -34,8 +34,6 @@ impl OperationController {
         GET_OPERATION_COUNTER.add(1, &[]);
 
         let operation = state
-            .read()
-            .await
             .database_client()
             .operation_repository()
             .get_operation(job_id, operation_id)
@@ -58,8 +56,6 @@ impl OperationController {
         let page_size = params.size();
 
         let operations = state
-            .read()
-            .await
             .database_client()
             .operation_repository()
             .get_operations(job_id, page, page_size)
