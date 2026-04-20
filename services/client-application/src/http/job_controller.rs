@@ -97,19 +97,16 @@ impl JobController {
             async move {
                 const CHUNK_SIZE: u32 = 128;
 
+                let message_producer = state_cloned.message_producer();
+
                 if let Err(err) = state_cloned
                     .database_client()
                     .operation_repository()
                     .get_batch_operations(
                         &job_id_cloned,
                         CHUNK_SIZE,
-                        |operation: domain::operation::Operation| {
-                            let state_cloned = state.clone();
-                            async move {
-                                state_cloned
-                                    .message_producer()
-                                    .send_operation_request(operation);
-                            }
+                        move |operation: domain::operation::Operation| async move {
+                            message_producer.send_operation_request(operation);
                         },
                     )
                     .await
