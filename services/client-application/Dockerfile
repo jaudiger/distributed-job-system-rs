@@ -4,11 +4,13 @@ FROM base AS dependencies
 WORKDIR /builder
 COPY Cargo.lock Cargo.toml ./
 COPY services/client-application/Cargo.toml ./services/client-application/
+COPY services/common/Cargo.toml ./services/common/
 COPY services/server-application/Cargo.toml ./services/server-application/
 ENV CARGO_HOME=/home/container/.cargo
 RUN set -eux; \
-    mkdir -p services/client-application/src services/server-application/src; \
+    mkdir -p services/client-application/src services/common/src services/server-application/src; \
     echo 'fn main() {}' > services/client-application/src/main.rs; \
+    : > services/common/src/lib.rs; \
     echo 'fn main() {}' > services/server-application/src/main.rs; \
     cargo fetch --locked
 
@@ -17,8 +19,10 @@ WORKDIR /builder
 COPY --from=dependencies /home/container/.cargo /home/container/.cargo
 COPY --from=dependencies /builder/Cargo.lock /builder/Cargo.toml ./
 COPY --from=dependencies /builder/services/client-application/Cargo.toml ./services/client-application/
+COPY --from=dependencies /builder/services/common/Cargo.toml ./services/common/
 COPY --from=dependencies /builder/services/server-application/Cargo.toml ./services/server-application/
 COPY services/client-application/src/ ./services/client-application/src/
+COPY services/common/src/ ./services/common/src/
 COPY services/server-application/src/ ./services/server-application/src/
 ENV CARGO_HOME=/home/container/.cargo
 RUN set -eux; \

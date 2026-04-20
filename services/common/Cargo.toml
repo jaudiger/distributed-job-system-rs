@@ -1,5 +1,5 @@
 [package]
-name = "server-application"
+name = "common"
 version = "1.0.0"
 authors.workspace = true
 edition.workspace = true
@@ -8,14 +8,20 @@ rust-version.workspace = true
 [dependencies]
 anyhow.workspace = true
 axum.workspace = true
-common = { path = "../common" }
-evalexpr = "13.1.0"
 opentelemetry.workspace = true
+opentelemetry-otlp.workspace = true
+opentelemetry-resource-detectors.workspace = true
+opentelemetry-semantic-conventions.workspace = true
+opentelemetry_sdk.workspace = true
+rdkafka.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
+tower-http.workspace = true
 tracing.workspace = true
+tracing-opentelemetry.workspace = true
+tracing-subscriber.workspace = true
 
 [lints]
 workspace = true

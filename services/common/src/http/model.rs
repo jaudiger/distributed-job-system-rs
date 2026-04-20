@@ -1,5 +1,3 @@
-// Health check models
-
 #[derive(Default, serde::Serialize)]
 #[serde(rename_all = "UPPERCASE")]
 enum StatusEnum {

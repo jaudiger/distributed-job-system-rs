@@ -1,4 +1,4 @@
-use crate::application::counter;
+use crate::counter;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::response::IntoResponse;

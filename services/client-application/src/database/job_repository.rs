@@ -1,7 +1,7 @@
-use crate::application::counter;
 use crate::database;
 use crate::domain;
 use anyhow::Result;
+use common::counter;
 use futures::TryStreamExt;
 use mongodb::Collection;
 use mongodb::bson::doc;

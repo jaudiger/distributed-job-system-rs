@@ -1,5 +1,4 @@
 use crate::application::context::SharedApplicationState;
-use crate::application::counter;
 use crate::http;
 use crate::http::model::PageParams;
 use crate::http::utils::ErrorResponse;
@@ -9,6 +8,7 @@ use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
 use axum::response::IntoResponse;
+use common::counter;
 
 counter!(
     GET_OPERATION_COUNTER,

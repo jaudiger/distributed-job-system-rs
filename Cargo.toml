@@ -6,6 +6,7 @@ rust-version = "1.95"
 [workspace]
 members = [
     "services/client-application",
+    "services/common",
     "services/server-application",
 ]
 resolver = "3"

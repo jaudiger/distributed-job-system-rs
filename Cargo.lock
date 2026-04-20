@@ -270,8 +270,23 @@ version = "1.0.0"
 dependencies = [
  "anyhow",
  "axum",
+ "common",
  "futures",
  "mongodb",
+ "opentelemetry",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
+name = "common"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "axum",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry-resource-detectors",
@@ -1999,21 +2014,14 @@ version = "1.0.0"
 dependencies = [
  "anyhow",
  "axum",
+ "common",
  "evalexpr",
  "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry-resource-detectors",
- "opentelemetry-semantic-conventions",
- "opentelemetry_sdk",
- "rdkafka",
  "serde",
  "serde_json",
  "tokio",
  "tokio-util",
- "tower-http",
  "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
 ]
 
 [[package]]

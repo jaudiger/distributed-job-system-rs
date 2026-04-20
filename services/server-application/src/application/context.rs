@@ -1,40 +1,43 @@
-use crate::http::http_server::HttpServer;
 use crate::messaging::consumer::MessageConsumer;
 use crate::messaging::producer::MessageProducer;
 use anyhow::Result;
+use axum::Router;
+use common::http::HttpServer;
 use std::sync::Arc;
 use tokio::signal::unix::SignalKind;
 use tokio::signal::unix::signal;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 
-pub struct ApplicationState {
+const HTTP_PORT: u16 = 8080;
+
+pub struct Application {
     consumer: MessageConsumer,
     http_server: HttpServer,
 }
 
-pub type SharedApplicationState = Arc<ApplicationState>;
-
-pub async fn create_application_state() -> Result<SharedApplicationState> {
+pub async fn create_application() -> Result<Application> {
     let message_producer = Arc::new(MessageProducer::new()?);
     let consumer = MessageConsumer::new(message_producer)?;
-    let http_server = HttpServer::new(8080);
+    let http_server = HttpServer::new(HTTP_PORT, Router::new());
 
-    Ok(Arc::new(ApplicationState {
+    Ok(Application {
         consumer,
         http_server,
-    }))
+    })
 }
 
-pub async fn start_application(application_state: SharedApplicationState) -> Result<()> {
+pub async fn start_application(application: Application) -> Result<()> {
     let shutdown = CancellationToken::new();
+    let Application {
+        consumer,
+        http_server,
+    } = application;
 
-    // Start the different components of the application
-    let handles = application_state
-        .http_server
+    let handles = http_server
         .start(&shutdown)
         .into_iter()
-        .chain(application_state.consumer.start(&shutdown));
+        .chain(consumer.start(&shutdown));
 
     let mut tasks = JoinSet::new();
     for handle in handles {
@@ -43,7 +46,6 @@ pub async fn start_application(application_state: SharedApplicationState) -> Res
 
     tasks.spawn(wait_for_shutdown_signal(shutdown.clone()));
 
-    // The first task to finish signals everyone else to drain.
     let first = tasks.join_next().await;
     shutdown.cancel();
 

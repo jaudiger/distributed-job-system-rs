@@ -1,19 +1,26 @@
 use crate::database::database_client::DatabaseClient;
-use crate::http::http_server::HttpServer;
+use crate::http::JobController;
+use crate::http::OperationController;
 use crate::messaging::consumer::MessageConsumer;
 use crate::messaging::producer::MessageProducer;
 use anyhow::Result;
+use axum::Router;
+use axum::extract::DefaultBodyLimit;
+use axum::handler::Handler as _;
+use axum::routing::get;
+use common::http::HttpServer;
 use std::sync::Arc;
 use tokio::signal::unix::SignalKind;
 use tokio::signal::unix::signal;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 
+const HTTP_PORT: u16 = 8080;
+const BODY_LIMIT: DefaultBodyLimit = DefaultBodyLimit::max(10 * 1024 * 1024); // 10MB
+
 pub struct ApplicationState {
     database_client: Arc<DatabaseClient>,
     message_producer: Arc<MessageProducer>,
-    consumer: MessageConsumer,
-    http_server: HttpServer,
 }
 
 impl ApplicationState {
@@ -28,29 +35,64 @@ impl ApplicationState {
 
 pub type SharedApplicationState = Arc<ApplicationState>;
 
-pub async fn create_application_state() -> Result<SharedApplicationState> {
+pub struct Application {
+    consumer: MessageConsumer,
+    http_server: HttpServer,
+}
+
+pub async fn create_application() -> Result<Application> {
     let database_client = Arc::new(DatabaseClient::new().await?);
     let message_producer = Arc::new(MessageProducer::new()?);
     let consumer = MessageConsumer::new(Arc::clone(&database_client))?;
-    let http_server = HttpServer::new(8080);
 
-    Ok(Arc::new(ApplicationState {
+    let application_state = Arc::new(ApplicationState {
         database_client,
         message_producer,
+    });
+
+    let router = build_router(Arc::clone(&application_state));
+    let http_server = HttpServer::new(HTTP_PORT, router);
+
+    Ok(Application {
         consumer,
         http_server,
-    }))
+    })
 }
 
-pub async fn start_application(application_state: SharedApplicationState) -> Result<()> {
-    let shutdown = CancellationToken::new();
+fn build_router(application_state: SharedApplicationState) -> Router {
+    Router::new()
+        .route(
+            "/api/jobs",
+            get(JobController::get_jobs_endpoint_handler)
+                .post(JobController::create_job_endpoint_handler.layer(BODY_LIMIT)),
+        )
+        .route(
+            "/api/jobs/{job_id}",
+            get(JobController::get_job_endpoint_handler)
+                .delete(JobController::delete_job_endpoint_handler),
+        )
+        .route(
+            "/api/jobs/{job_id}/operations",
+            get(OperationController::get_operations_endpoint_handler),
+        )
+        .route(
+            "/api/jobs/{job_id}/operations/{operation_id}",
+            get(OperationController::get_operation_endpoint_handler),
+        )
+        .with_state(application_state)
+}
 
-    // Start the different components of the application
-    let handles = application_state
-        .http_server
-        .start(Arc::clone(&application_state), &shutdown)
+pub async fn start_application(application: Application) -> Result<()> {
+    let shutdown = CancellationToken::new();
+    let Application {
+        consumer,
+        http_server,
+    } = application;
+
+    let handles = http_server
+        .start(&shutdown)
         .into_iter()
-        .chain(application_state.consumer.start(&shutdown));
+        .chain(consumer.start(&shutdown));
 
     let mut tasks = JoinSet::new();
     for handle in handles {
@@ -59,7 +101,6 @@ pub async fn start_application(application_state: SharedApplicationState) -> Res
 
     tasks.spawn(wait_for_shutdown_signal(shutdown.clone()));
 
-    // The first task to finish signals everyone else to drain.
     let first = tasks.join_next().await;
     shutdown.cancel();
 

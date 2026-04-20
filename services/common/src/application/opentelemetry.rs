@@ -1,4 +1,3 @@
-use crate::application::APPLICATION_NAME;
 use anyhow::Result;
 use opentelemetry::trace::TracerProvider;
 use opentelemetry_otlp::WithExportConfig as _;
@@ -14,11 +13,13 @@ pub struct OpentelemetryHandler {
 }
 
 impl OpentelemetryHandler {
-    pub fn new() -> Result<Self> {
+    pub fn new(application_name: &'static str) -> Result<Self> {
+        super::set_application_name(application_name);
+
         let tracer_provider = Self::create_trace_exporter()?;
         let meter_provider = Self::create_metric_exporter()?;
 
-        let tracer = tracer_provider.tracer(APPLICATION_NAME);
+        let tracer = tracer_provider.tracer(application_name);
 
         tracing_subscriber::registry()
             .with(tracing_subscriber::fmt::layer())
@@ -75,7 +76,7 @@ impl OpentelemetryHandler {
         const APPLICATION_VERSION: &str = env!("CARGO_PKG_VERSION");
 
         opentelemetry_sdk::Resource::builder()
-            .with_service_name(super::APPLICATION_NAME)
+            .with_service_name(super::application_name())
             .with_attribute(opentelemetry::KeyValue::new(
                 opentelemetry_semantic_conventions::resource::SERVICE_VERSION,
                 APPLICATION_VERSION,

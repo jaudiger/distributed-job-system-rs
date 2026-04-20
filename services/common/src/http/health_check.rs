@@ -1,4 +1,4 @@
-use crate::application::counter;
+use crate::counter;
 use crate::http::model::HealthCheckResponse;
 use axum::Json;
 use axum::response::IntoResponse;

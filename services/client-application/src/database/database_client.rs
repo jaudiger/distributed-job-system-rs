@@ -26,7 +26,8 @@ impl DatabaseClient {
         client.warm_connection_pool().await;
 
         let database = client.database(Self::DATABASE_NAME);
-        let job_repository = JobRepository::new(database.collection(JobRepository::COLLECTION_NAME));
+        let job_repository =
+            JobRepository::new(database.collection(JobRepository::COLLECTION_NAME));
         let operation_repository =
             OperationRepository::new(database.collection(OperationRepository::COLLECTION_NAME))
                 .await?;
