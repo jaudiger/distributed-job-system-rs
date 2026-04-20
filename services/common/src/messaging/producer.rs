@@ -186,7 +186,7 @@ where
             Self::KAFKA_CONFIG_BATCH_SIZE,
             Self::KAFKA_CONFIG_BATCH_SIZE_DEFAULT_VALUE,
         );
-        producer_config.set_log_level(rdkafka::config::RDKafkaLogLevel::Info);
+        producer_config.set_log_level(rdkafka::config::RDKafkaLogLevel::Warning);
 
         producer_config
     }

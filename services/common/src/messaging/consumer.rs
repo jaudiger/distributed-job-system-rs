@@ -189,7 +189,7 @@ where
             Self::KAFKA_CONFIG_RECONNECT_BACKOFF_MAX_MS,
             Self::KAFKA_CONFIG_RECONNECT_BACKOFF_MAX_MS_DEFAULT_VALUE,
         );
-        consumer_config.set_log_level(rdkafka::config::RDKafkaLogLevel::Info);
+        consumer_config.set_log_level(rdkafka::config::RDKafkaLogLevel::Warning);
 
         consumer_config
     }
