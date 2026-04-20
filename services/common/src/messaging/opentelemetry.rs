@@ -1,4 +1,5 @@
 use rdkafka::message::Headers as _;
+use std::mem;
 use std::sync::LazyLock;
 
 static ENABLE_OTEL_TRACES: LazyLock<bool> = LazyLock::new(|| {
@@ -18,25 +19,22 @@ pub fn should_instrument_kafka() -> bool {
 }
 
 #[derive(Default)]
-pub struct KafkaHeaderContextInjector(Vec<(String, String)>);
+pub struct KafkaHeaderContextInjector(rdkafka::message::OwnedHeaders);
 
 impl From<KafkaHeaderContextInjector> for rdkafka::message::OwnedHeaders {
     fn from(value: KafkaHeaderContextInjector) -> Self {
-        let mut headers = Self::new();
-        for (key, value) in value.0 {
-            headers = headers.insert(rdkafka::message::Header {
-                key: key.as_str(),
-                value: Some(value.as_str()),
-            });
-        }
-
-        headers
+        value.0
     }
 }
 
 impl opentelemetry::propagation::Injector for KafkaHeaderContextInjector {
     fn set(&mut self, key: &str, value: String) {
-        self.0.push((key.to_string(), value));
+        // rdkafka copies key and value bytes internally, so no allocation is required here
+        let headers = mem::take(&mut self.0);
+        self.0 = headers.insert(rdkafka::message::Header {
+            key,
+            value: Some(value.as_str()),
+        });
     }
 }
 
