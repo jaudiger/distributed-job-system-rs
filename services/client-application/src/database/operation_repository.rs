@@ -3,6 +3,7 @@ use crate::domain;
 use anyhow::Result;
 use common::counter;
 use futures::Future;
+use futures::StreamExt as _;
 use futures::TryStreamExt;
 use mongodb::Collection;
 use mongodb::IndexModel;
@@ -158,7 +159,7 @@ impl OperationRepository {
             .collection
             .count_documents(doc! {
                 Self::JOB_ID_FIELD: job_id,
-                Self::RESULT_FIELD: { "$exists": true, "$ne": "" }
+                Self::RESULT_FIELD: { "$exists": true }
             })
             .await?;
 
@@ -226,9 +227,9 @@ impl OperationRepository {
         while let Some(batch) = chunked.try_next().await? {
             tracing::trace!("Processing a chunk of {} operations", batch.len());
 
-            for op in batch {
-                handler(op).await;
-            }
+            futures::stream::iter(batch)
+                .for_each_concurrent(None, &mut handler)
+                .await;
         }
 
         Ok(())
