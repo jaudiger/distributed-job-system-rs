@@ -69,6 +69,15 @@ where
     const KAFKA_CONFIG_COMPRESSION_TYPE_DEFAULT_VALUE: &str = "zstd";
     const KAFKA_CONFIG_LINGER_MS_DEFAULT_VALUE: &str = "50";
 
+    /// Builds a Kafka future producer bound to `topic`, reading the broker
+    /// address from the `KAFKA_URI` environment variable and falling back
+    /// to the default URI when unset. Outgoing payloads are JSON-serialized
+    /// and dispatched on a Tokio task by [`Self::send`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the underlying Kafka producer cannot be
+    /// constructed from the resolved configuration.
     pub fn new(topic: &'static str) -> Result<Self> {
         tracing::debug!("Initializing the Kafka producer");
 
@@ -90,10 +99,10 @@ where
             .map_err(|err| anyhow::anyhow!(format!("Failed to create Kafka producer: {err}")))
     }
 
-    pub fn send(&self, payload: T) {
+    pub fn send(&self, payload: &T) {
         let topic = self.topic;
 
-        let serialized = match serde_json::to_string(&payload) {
+        let serialized = match serde_json::to_string(payload) {
             Ok(value) => value,
             Err(err) => {
                 tracing::error!("Failed to serialize message: {err}");

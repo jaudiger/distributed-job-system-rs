@@ -1,5 +1,5 @@
 use crate::domain;
-use crate::domain::job::JobStatusEnum;
+use crate::domain::job::JobStatus;
 
 // Job models
 
@@ -7,7 +7,7 @@ use crate::domain::job::JobStatusEnum;
 pub struct NewJobResponse {
     id: String,
     created_operations: usize,
-    status: JobStatusEnum,
+    status: JobStatus,
 }
 
 impl NewJobResponse {
@@ -15,7 +15,7 @@ impl NewJobResponse {
         Self {
             id: id.into(),
             created_operations,
-            status: JobStatusEnum::InProgress,
+            status: JobStatus::InProgress,
         }
     }
 }
@@ -24,7 +24,7 @@ impl NewJobResponse {
 pub struct JobResponse {
     id: String,
     operations: usize,
-    status: JobStatusEnum,
+    status: JobStatus,
 }
 
 impl JobResponse {

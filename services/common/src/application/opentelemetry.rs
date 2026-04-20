@@ -13,6 +13,17 @@ pub struct OpentelemetryHandler {
 }
 
 impl OpentelemetryHandler {
+    /// Builds the OTLP trace and metric exporters for `application_name` and
+    /// installs them as the global tracer and meter providers, then wires a
+    /// `tracing_subscriber` registry that forwards spans and metric events
+    /// through `tracing-opentelemetry`. The returned handler owns both
+    /// providers so they can be flushed via [`Self::shutdown`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when building the OTLP trace or metric exporter
+    /// fails, or when a tracing subscriber has already been installed for
+    /// the current process.
     pub fn new(application_name: &'static str) -> Result<Self> {
         super::set_application_name(application_name);
 

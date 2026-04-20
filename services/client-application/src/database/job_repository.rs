@@ -59,8 +59,8 @@ impl JobRepository {
     }
 
     #[tracing::instrument(skip(self))]
-    pub async fn delete_job(&self, job_id: impl AsRef<str> + std::fmt::Debug) -> Result<()> {
-        tracing::debug!("Deleting job with id {}", job_id.as_ref());
+    pub async fn delete_job(&self, job_id: &str) -> Result<()> {
+        tracing::debug!("Deleting job with id {job_id}");
 
         DELETE_JOB_COUNTER.add(1, &[]);
 
@@ -77,11 +77,8 @@ impl JobRepository {
     }
 
     #[tracing::instrument(skip(self))]
-    pub async fn get_job(
-        &self,
-        job_id: impl AsRef<str> + std::fmt::Debug,
-    ) -> Result<domain::job::Job> {
-        tracing::debug!("Getting job with id: {}", job_id.as_ref());
+    pub async fn get_job(&self, job_id: &str) -> Result<domain::job::Job> {
+        tracing::debug!("Getting job with id: {job_id}");
 
         GET_JOB_COUNTER.add(1, &[]);
 

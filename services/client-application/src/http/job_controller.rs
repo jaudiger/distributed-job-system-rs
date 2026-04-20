@@ -53,7 +53,7 @@ impl JobController {
             ));
         }
 
-        let new_job = domain::job::Job::new_job(lines);
+        let new_job = domain::job::Job::new(lines);
 
         let job_id = state
             .database_client()
@@ -61,9 +61,9 @@ impl JobController {
             .insert_job(&new_job)
             .await?;
 
-        let new_operations = body
+        let new_operations: Vec<_> = body
             .lines()
-            .map(|request| domain::operation::Operation::new_operation(&job_id, request))
+            .map(|request| domain::operation::Operation::new(&job_id, request))
             .collect();
 
         // Add the operations to the database
@@ -181,7 +181,7 @@ impl JobController {
         let total_completed_operations = state
             .database_client()
             .operation_repository()
-            .get_total_completed_operations(job_id)
+            .get_total_completed_operations(&job_id)
             .await?;
 
         Ok(Json(http::model::JobResponse::new(

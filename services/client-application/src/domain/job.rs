@@ -1,7 +1,7 @@
 use mongodb::bson::oid::ObjectId;
 
 #[derive(Clone, Copy, serde::Deserialize, serde::Serialize)]
-pub enum JobStatusEnum {
+pub enum JobStatus {
     InProgress,
     Completed,
 }
@@ -14,7 +14,7 @@ pub struct Job {
 }
 
 impl Job {
-    pub const fn new_job(operations: usize) -> Self {
+    pub const fn new(operations: usize) -> Self {
         Self {
             id: None,
             operations,
@@ -29,11 +29,11 @@ impl Job {
         self.operations
     }
 
-    pub const fn status(&self, total_finished: usize) -> JobStatusEnum {
+    pub const fn status(&self, total_finished: usize) -> JobStatus {
         if total_finished == self.operations {
-            JobStatusEnum::Completed
+            JobStatus::Completed
         } else {
-            JobStatusEnum::InProgress
+            JobStatus::InProgress
         }
     }
 }

@@ -13,6 +13,6 @@ impl MessageProducer {
     }
 
     pub fn send_operation_request(&self, operation: domain::operation::Operation) {
-        self.0.send(OperationRequest::from(operation));
+        self.0.send(&OperationRequest::from(operation));
     }
 }

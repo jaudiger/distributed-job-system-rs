@@ -36,7 +36,7 @@ impl OperationController {
         let operation = state
             .database_client()
             .operation_repository()
-            .get_operation(job_id, operation_id)
+            .get_operation(&job_id, &operation_id)
             .await?;
 
         Ok(Json(http::model::OperationResponse::from(operation)))
@@ -58,7 +58,7 @@ impl OperationController {
         let operations = state
             .database_client()
             .operation_repository()
-            .get_operations(job_id, page, page_size)
+            .get_operations(&job_id, page, page_size)
             .await?;
 
         Ok(Json(http::model::PageResponse::new(

@@ -99,26 +99,26 @@ impl OperationRepository {
     #[tracing::instrument(skip(self))]
     pub async fn insert_operations(
         &self,
-        new_operation: &Vec<domain::operation::Operation>,
+        new_operations: &[domain::operation::Operation],
     ) -> Result<()> {
         tracing::debug!("Inserting operations");
 
         INSERT_OPERATIONS_COUNTER.add(1, &[]);
 
-        let _ = self.collection.insert_many(new_operation).await?;
+        let _ = self.collection.insert_many(new_operations).await?;
 
         Ok(())
     }
 
     #[tracing::instrument(skip(self))]
-    pub async fn delete_operations(&self, job_id: impl AsRef<str> + std::fmt::Debug) -> Result<()> {
-        tracing::debug!("Deleting operations of job {}", job_id.as_ref());
+    pub async fn delete_operations(&self, job_id: &str) -> Result<()> {
+        tracing::debug!("Deleting operations of job {job_id}");
 
         DELETE_OPERATIONS_COUNTER.add(1, &[]);
 
         let _ = self
             .collection
-            .delete_many(doc! {Self::JOB_ID_FIELD: job_id.as_ref()})
+            .delete_many(doc! {Self::JOB_ID_FIELD: job_id})
             .await?;
 
         Ok(())
@@ -127,14 +127,10 @@ impl OperationRepository {
     #[tracing::instrument(skip(self))]
     pub async fn get_operation(
         &self,
-        job_id: impl AsRef<str> + std::fmt::Debug,
-        operation_id: impl AsRef<str> + std::fmt::Debug,
+        job_id: &str,
+        operation_id: &str,
     ) -> Result<domain::operation::Operation> {
-        tracing::debug!(
-            "Getting operation {} for job {}",
-            operation_id.as_ref(),
-            job_id.as_ref()
-        );
+        tracing::debug!("Getting operation {operation_id} for job {job_id}");
 
         GET_OPERATION_COUNTER.add(1, &[]);
 
@@ -142,7 +138,7 @@ impl OperationRepository {
             .collection
             .find_one(doc! {
                 Self::ID_FIELD: ObjectId::parse_str(operation_id)?,
-                Self::JOB_ID_FIELD: job_id.as_ref()
+                Self::JOB_ID_FIELD: job_id
             })
             .await?;
 
@@ -154,21 +150,15 @@ impl OperationRepository {
     }
 
     #[tracing::instrument(skip(self))]
-    pub async fn get_total_completed_operations(
-        &self,
-        job_id: impl AsRef<str> + std::fmt::Debug,
-    ) -> Result<usize> {
-        tracing::debug!(
-            "Getting total completed operations for job {}",
-            job_id.as_ref()
-        );
+    pub async fn get_total_completed_operations(&self, job_id: &str) -> Result<usize> {
+        tracing::debug!("Getting total completed operations for job {job_id}");
 
         GET_TOTAL_COMPLETED_OPERATIONS_COUNTER.add(1, &[]);
 
         let result = self
             .collection
             .count_documents(doc! {
-                Self::JOB_ID_FIELD: job_id.as_ref(),
+                Self::JOB_ID_FIELD: job_id,
                 Self::RESULT_FIELD: { "$exists": true, "$ne": "" }
             })
             .await?;
@@ -179,16 +169,16 @@ impl OperationRepository {
     #[tracing::instrument(skip(self))]
     pub async fn get_operations(
         &self,
-        job_id: impl AsRef<str> + std::fmt::Debug,
+        job_id: &str,
         page: usize,
         page_size: usize,
     ) -> Result<database::model::PageSubset<domain::operation::Operation>> {
-        tracing::debug!("Getting operations for job {}", job_id.as_ref());
+        tracing::debug!("Getting operations for job {job_id}");
 
         GET_OPERATIONS_COUNTER.add(1, &[]);
 
         let skip = ((page - 1) * page_size) as u64;
-        let filter = doc! {Self::JOB_ID_FIELD: job_id.as_ref()};
+        let filter = doc! {Self::JOB_ID_FIELD: job_id};
 
         #[allow(clippy::cast_possible_wrap)]
         let mut cursor = self
@@ -215,7 +205,7 @@ impl OperationRepository {
     #[tracing::instrument(skip(self, handler))]
     pub async fn get_batch_operations<F, Fut>(
         &self,
-        job_id: impl AsRef<str> + std::fmt::Debug,
+        job_id: &str,
         batch_size: u32,
         mut handler: F,
     ) -> Result<()>
@@ -223,13 +213,13 @@ impl OperationRepository {
         F: FnMut(domain::operation::Operation) -> Fut + Send,
         Fut: Future<Output = ()> + Send,
     {
-        tracing::debug!("Getting operations for job {}", job_id.as_ref());
+        tracing::debug!("Getting operations for job {job_id}");
 
         GET_BATCH_OPERATIONS_COUNTER.add(1, &[]);
 
         let cursor = self
             .collection
-            .find(doc! { Self::JOB_ID_FIELD: job_id.as_ref() })
+            .find(doc! { Self::JOB_ID_FIELD: job_id })
             .batch_size(batch_size)
             .await?;
 
@@ -249,15 +239,11 @@ impl OperationRepository {
     #[tracing::instrument(skip(self))]
     pub async fn update_operation(
         &self,
-        job_id: impl AsRef<str> + std::fmt::Debug,
-        operation_id: impl AsRef<str> + std::fmt::Debug,
-        result: impl AsRef<str> + std::fmt::Debug,
+        job_id: &str,
+        operation_id: &str,
+        result: &str,
     ) -> Result<()> {
-        tracing::debug!(
-            "Updating operation {} for job {}",
-            operation_id.as_ref(),
-            job_id.as_ref()
-        );
+        tracing::debug!("Updating operation {operation_id} for job {job_id}");
 
         UPDATE_OPERATION_COUNTER.add(1, &[]);
 
@@ -266,10 +252,10 @@ impl OperationRepository {
             .update_one(
                 doc! {
                     Self::ID_FIELD: ObjectId::parse_str(operation_id)?,
-                    Self::JOB_ID_FIELD: job_id.as_ref()
+                    Self::JOB_ID_FIELD: job_id
                 },
                 doc! {
-                    "$set": doc! {Self::RESULT_FIELD: Some(result.as_ref())}
+                    "$set": doc! {Self::RESULT_FIELD: Some(result)}
                 },
             )
             .await?;

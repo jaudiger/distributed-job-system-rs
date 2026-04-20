@@ -91,6 +91,16 @@ where
     const KAFKA_CONFIG_RECONNECT_BACKOFF_MAX_MS_DEFAULT_VALUE: &str = "15000";
     const KAFKA_CONFIG_RECONNECT_BACKOFF_MS_DEFAULT_VALUE: &str = "5000";
 
+    /// Creates `concurrency` Kafka stream consumers that share `group_id`,
+    /// each subscribed to `topic`, and binds them to `handler`. The broker
+    /// address is read from the `KAFKA_URI` environment variable and falls
+    /// back to the default URI when unset. Start the consumers by calling
+    /// [`Self::start`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when a Kafka consumer cannot be created from the
+    /// resolved configuration or when subscribing it to `topic` fails.
     pub fn new(
         handler: Arc<H>,
         topic: &'static str,

@@ -17,7 +17,7 @@ impl<T> PageSubset<T> {
         self.total
     }
 
-    pub const fn items_subset(&self) -> &Vec<T> {
-        &self.items_subset
+    pub const fn items_subset(&self) -> &[T] {
+        self.items_subset.as_slice()
     }
 }

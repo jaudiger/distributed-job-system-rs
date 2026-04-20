@@ -11,7 +11,7 @@ pub struct Operation {
 }
 
 impl Operation {
-    pub fn new_operation(job_id: impl Into<String>, request: impl Into<String>) -> Self {
+    pub fn new(job_id: impl Into<String>, request: impl Into<String>) -> Self {
         Self {
             id: None,
             job_id: job_id.into(),
