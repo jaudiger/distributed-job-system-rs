@@ -97,21 +97,20 @@ impl JobRepository {
     #[tracing::instrument(skip(self))]
     pub async fn get_jobs(
         &self,
-        page: usize,
-        page_size: usize,
+        page: u32,
+        page_size: u32,
     ) -> Result<database::model::PageSubset<domain::job::Job>> {
         tracing::debug!("Getting jobs");
 
         GET_JOBS_COUNTER.add(1, &[]);
 
-        let skip = ((page - 1) * page_size) as u64;
+        let skip = u64::from(page - 1) * u64::from(page_size);
         let filter = doc! {};
 
-        #[allow(clippy::cast_possible_wrap)]
         let mut cursor = self
             .collection
             .find(filter.clone())
-            .limit(page_size as i64)
+            .limit(i64::from(page_size))
             .skip(skip)
             .await?;
 

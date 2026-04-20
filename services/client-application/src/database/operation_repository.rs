@@ -67,12 +67,12 @@ impl OperationRepository {
         let job_id_index = IndexModel::builder()
             .keys(doc! { Self::JOB_ID_FIELD: 1 })
             .build();
-        let _ = collection.create_index(job_id_index).await?;
+        collection.create_index(job_id_index).await?;
 
         let result_index = IndexModel::builder()
             .keys(doc! { Self::RESULT_FIELD: 1 })
             .build();
-        let _ = collection.create_index(result_index).await?;
+        collection.create_index(result_index).await?;
 
         Ok(Self { collection })
     }
@@ -105,7 +105,7 @@ impl OperationRepository {
 
         INSERT_OPERATIONS_COUNTER.add(1, &[]);
 
-        let _ = self.collection.insert_many(new_operations).await?;
+        self.collection.insert_many(new_operations).await?;
 
         Ok(())
     }
@@ -116,8 +116,7 @@ impl OperationRepository {
 
         DELETE_OPERATIONS_COUNTER.add(1, &[]);
 
-        let _ = self
-            .collection
+        self.collection
             .delete_many(doc! {Self::JOB_ID_FIELD: job_id})
             .await?;
 
@@ -170,21 +169,20 @@ impl OperationRepository {
     pub async fn get_operations(
         &self,
         job_id: &str,
-        page: usize,
-        page_size: usize,
+        page: u32,
+        page_size: u32,
     ) -> Result<database::model::PageSubset<domain::operation::Operation>> {
         tracing::debug!("Getting operations for job {job_id}");
 
         GET_OPERATIONS_COUNTER.add(1, &[]);
 
-        let skip = ((page - 1) * page_size) as u64;
+        let skip = u64::from(page - 1) * u64::from(page_size);
         let filter = doc! {Self::JOB_ID_FIELD: job_id};
 
-        #[allow(clippy::cast_possible_wrap)]
         let mut cursor = self
             .collection
             .find(filter.clone())
-            .limit(page_size as i64)
+            .limit(i64::from(page_size))
             .skip(skip)
             .await?;
 

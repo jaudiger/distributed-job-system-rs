@@ -83,23 +83,23 @@ impl From<&domain::operation::Operation> for MinimalOperationResponse {
 
 #[derive(Debug, serde::Deserialize)]
 pub struct PageParams {
-    page: Option<usize>,
-    size: Option<usize>,
+    page: Option<u32>,
+    size: Option<u32>,
 }
 
 impl PageParams {
-    const DEFAULT_PAGE: usize = 1;
-    const DEFAULT_SIZE: usize = 30;
+    const DEFAULT_PAGE: u32 = 1;
+    const DEFAULT_SIZE: u32 = 30;
 
-    const MIN_PAGE: usize = 1;
-    const MIN_SIZE: usize = 1;
-    const MAX_SIZE: usize = 100;
+    const MIN_PAGE: u32 = 1;
+    const MIN_SIZE: u32 = 1;
+    const MAX_SIZE: u32 = 100;
 
-    pub fn page(&self) -> usize {
+    pub fn page(&self) -> u32 {
         self.page.unwrap_or(Self::DEFAULT_PAGE).max(Self::MIN_PAGE)
     }
 
-    pub fn size(&self) -> usize {
+    pub fn size(&self) -> u32 {
         self.size
             .unwrap_or(Self::DEFAULT_SIZE)
             .clamp(Self::MIN_SIZE, Self::MAX_SIZE)
@@ -108,14 +108,14 @@ impl PageParams {
 
 #[derive(serde::Serialize)]
 pub struct PageResponse<T> {
-    page: usize,
-    size: usize,
+    page: u32,
+    size: u32,
     total: usize,
     items: Vec<T>,
 }
 
 impl<T> PageResponse<T> {
-    pub const fn new(page: usize, size: usize, total: usize, items: Vec<T>) -> Self {
+    pub const fn new(page: u32, size: u32, total: usize, items: Vec<T>) -> Self {
         Self {
             page,
             size,
