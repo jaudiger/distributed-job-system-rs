@@ -1,3 +1,4 @@
+use anyhow::Result;
 use mongodb::bson::oid::ObjectId;
 
 #[derive(Clone, Copy, serde::Deserialize, serde::Serialize)]
@@ -14,11 +15,15 @@ pub struct Job {
 }
 
 impl Job {
-    pub const fn new(operations: usize) -> Self {
-        Self {
+    pub fn new(operations: usize) -> Result<Self> {
+        if operations == 0 {
+            anyhow::bail!("A job must contain at least one operation");
+        }
+
+        Ok(Self {
             id: None,
             operations,
-        }
+        })
     }
 
     pub fn id(&self) -> String {
