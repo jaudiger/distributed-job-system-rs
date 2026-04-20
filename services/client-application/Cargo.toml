@@ -9,7 +9,7 @@ rust-version.workspace = true
 anyhow.workspace = true
 axum.workspace = true
 common = { path = "../common" }
-futures = "0.3.32"
+futures.workspace = true
 mongodb = { version = "3.5.2", features = ["opentelemetry", "tracing-unstable"] }
 opentelemetry.workspace = true
 serde.workspace = true

@@ -107,6 +107,7 @@ impl PageParams {
 }
 
 #[derive(serde::Serialize)]
+#[serde(bound = "T: serde::Serialize")]
 pub struct PageResponse<T> {
     page: u32,
     size: u32,

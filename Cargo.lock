@@ -2016,6 +2016,7 @@ dependencies = [
  "axum",
  "common",
  "evalexpr",
+ "futures",
  "opentelemetry",
  "serde",
  "serde_json",

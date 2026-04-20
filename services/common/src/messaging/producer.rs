@@ -122,23 +122,20 @@ where
                 async {
                     tracing::debug!("Sending message");
 
+                    let mut context_injector = KafkaHeaderContextInjector::default();
+                    if should_instrument_kafka() {
+                        opentelemetry::global::get_text_map_propagator(|propagator| {
+                            let opentelemetry_context = tracing::Span::current().context();
+                            propagator
+                                .inject_context(&opentelemetry_context, &mut context_injector);
+                        });
+                    }
+
+                    let headers = rdkafka::message::OwnedHeaders::from(context_injector);
                     let future_record: rdkafka::producer::FutureRecord<'_, str, _> =
-                        if should_instrument_kafka() {
-                            let mut context_injector = KafkaHeaderContextInjector::default();
-                            opentelemetry::global::get_text_map_propagator(|propagator| {
-                                let opentelemetry_context = tracing::Span::current().context();
-                                propagator
-                                    .inject_context(&opentelemetry_context, &mut context_injector);
-                            });
-
-                            let headers = rdkafka::message::OwnedHeaders::from(context_injector);
-
-                            rdkafka::producer::FutureRecord::to(topic)
-                                .payload(&serialized)
-                                .headers(headers)
-                        } else {
-                            rdkafka::producer::FutureRecord::to(topic).payload(&serialized)
-                        };
+                        rdkafka::producer::FutureRecord::to(topic)
+                            .payload(&serialized)
+                            .headers(headers);
 
                     if let Err(err) = producer
                         .send(
