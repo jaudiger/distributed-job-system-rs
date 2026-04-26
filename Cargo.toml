@@ -18,7 +18,7 @@ pedantic = { level = "warn", priority = -1 }
 
 [workspace.dependencies]
 anyhow = "1.0.102"
-axum = { version = "0.8.8", features = ["macros"] }
+axum = { version = "0.8.9", features = ["macros"] }
 futures = "0.3.32"
 opentelemetry = "0.31.0"
 opentelemetry-otlp = { version = "0.31.1", default-features = false, features = [
@@ -35,7 +35,7 @@ opentelemetry_sdk = { version = "0.31.0", features = ["logs", "metrics", "trace"
 rdkafka = { version = "0.39.0", default-features = false, features = ["tokio", "zstd", "tracing"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-tokio = { version = "1.51.1", features = ["rt-multi-thread", "macros", "net", "signal", "tracing"] }
+tokio = { version = "1.52.1", features = ["rt-multi-thread", "macros", "net", "signal", "tracing"] }
 tokio-util = "0.7.18"
 tower-http = { version = "0.6.8", features = ["trace"] }
 tracing = "0.1.44"
