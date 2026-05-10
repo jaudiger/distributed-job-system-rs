@@ -20,8 +20,8 @@ pedantic = { level = "warn", priority = -1 }
 anyhow = "1.0.102"
 axum = { version = "0.8.9", features = ["macros"] }
 futures = "0.3.32"
-opentelemetry = "0.31.0"
-opentelemetry-otlp = { version = "0.31.1", default-features = false, features = [
+opentelemetry = "0.32.0"
+opentelemetry-otlp = { version = "0.32.0", default-features = false, features = [
     "logs",
     "metrics",
     "trace",
@@ -30,14 +30,14 @@ opentelemetry-otlp = { version = "0.31.1", default-features = false, features = 
     "reqwest-blocking-client",
 ] }
 opentelemetry-resource-detectors = "0.10.0"
-opentelemetry-semantic-conventions = "0.31.0"
-opentelemetry_sdk = { version = "0.31.0", features = ["logs", "metrics", "trace", "rt-tokio"] }
+opentelemetry-semantic-conventions = "0.32.0"
+opentelemetry_sdk = { version = "0.32.0", features = ["logs", "metrics", "trace", "rt-tokio"] }
 rdkafka = { version = "0.39.0", default-features = false, features = ["tokio", "zstd", "tracing"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-tokio = { version = "1.52.1", features = ["rt-multi-thread", "macros", "net", "signal", "tracing"] }
+tokio = { version = "1.52.3", features = ["rt-multi-thread", "macros", "net", "signal", "tracing"] }
 tokio-util = "0.7.18"
-tower-http = { version = "0.6.8", features = ["trace"] }
+tower-http = { version = "0.6.10", features = ["trace"] }
 tracing = "0.1.44"
 tracing-opentelemetry = "0.32.1"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
