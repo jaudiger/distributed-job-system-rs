@@ -40,24 +40,29 @@ jobs:
             workflows:
               - '.github/workflows/**'
 
+  build-rust:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    uses: jaudiger/reusable-workflows/.github/workflows/build-rust.yml@4aef3115afe05a19785b3e14970ecd4f400cc457
+
   lint-rust:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
-    uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-rust.yml@af70992c9dcbb3bf0a833629b18cb661b7c616fe
+    uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-rust.yml@4aef3115afe05a19785b3e14970ecd4f400cc457
 
   lint-docker:
     needs: changes
     if: needs.changes.outputs.docker == 'true'
-    uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-docker.yml@af70992c9dcbb3bf0a833629b18cb661b7c616fe
+    uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-docker.yml@4aef3115afe05a19785b3e14970ecd4f400cc457
 
   lint-actions:
     needs: changes
     if: needs.changes.outputs.workflows == 'true'
-    uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-github-actions.yml@af70992c9dcbb3bf0a833629b18cb661b7c616fe
+    uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-github-actions.yml@4aef3115afe05a19785b3e14970ecd4f400cc457
 
   ci:
     if: always()
-    needs: [lint-rust, lint-docker, lint-actions]
+    needs: [build-rust, lint-rust, lint-docker, lint-actions]
     runs-on: ubuntu-latest
     steps:
       - name: Verify all required checks passed
