@@ -36,6 +36,13 @@ impl opentelemetry::propagation::Injector for KafkaHeaderContextInjector {
             value: Some(value.as_str()),
         });
     }
+
+    fn reserve(&mut self, additional: usize) {
+        // rdkafka has no in-place reserve; only swap when nothing has been inserted yet.
+        if self.0.count() == 0 {
+            self.0 = rdkafka::message::OwnedHeaders::new_with_capacity(additional);
+        }
+    }
 }
 
 pub struct KafkaHeaderContextExtractor<'a>(Option<&'a rdkafka::message::BorrowedHeaders>);
