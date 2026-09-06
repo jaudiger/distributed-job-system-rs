@@ -93,9 +93,11 @@ impl OpentelemetryHandler {
                 APPLICATION_VERSION,
             ))
             .with_detectors(&[
+                Box::new(opentelemetry_resource_detectors::ContainerResourceDetector),
+                Box::new(opentelemetry_resource_detectors::K8sResourceDetector),
                 Box::new(opentelemetry_resource_detectors::OsResourceDetector),
                 Box::new(opentelemetry_resource_detectors::ProcessResourceDetector),
-                Box::new(opentelemetry_resource_detectors::K8sResourceDetector),
+                Box::new(opentelemetry_resource_detectors::ServiceInstanceIdResourceDetector),
             ])
             .build()
     }
