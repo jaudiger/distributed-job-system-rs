@@ -67,7 +67,7 @@ pub struct MessageConsumer<T, H> {
 
 impl<T, H> MessageConsumer<T, H>
 where
-    T: Send + 'static + for<'a> TryFrom<&'a str, Error = anyhow::Error>,
+    T: std::str::FromStr<Err = anyhow::Error>,
     H: MessageHandler<T>,
 {
     const KAFKA_URI_ENV_VAR: &str = "KAFKA_URI";
@@ -231,7 +231,7 @@ where
 
                                 return;
                             }
-                            Some(Ok(value)) => match T::try_from(value) {
+                            Some(Ok(value)) => match T::from_str(value) {
                                 Ok(deserialize_value) => deserialize_value,
                                 Err(err) => {
                                     tracing::error!("Error while deserializing message: {err:?}");

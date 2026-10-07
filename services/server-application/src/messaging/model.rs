@@ -1,4 +1,5 @@
 use crate::domain;
+use core::str::FromStr;
 
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -22,10 +23,10 @@ impl OperationRequest {
     }
 }
 
-impl TryFrom<&str> for OperationRequest {
-    type Error = anyhow::Error;
+impl FromStr for OperationRequest {
+    type Err = anyhow::Error;
 
-    fn try_from(message: &str) -> Result<Self, Self::Error> {
+    fn from_str(message: &str) -> Result<Self, Self::Err> {
         serde_json::from_str::<Self>(message).map_err(|err| anyhow::anyhow!(err))
     }
 }
