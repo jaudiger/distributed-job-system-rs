@@ -27,7 +27,7 @@ impl Job {
     }
 
     pub fn id(&self) -> String {
-        self.id.map(ObjectId::to_hex).unwrap_or_default()
+        self.id.map_or_default(ObjectId::to_hex)
     }
 
     pub const fn operations(&self) -> usize {
