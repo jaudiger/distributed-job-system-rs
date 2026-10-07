@@ -51,7 +51,7 @@ pub struct MessageProducer<T> {
 
 impl<T> MessageProducer<T>
 where
-    T: serde::Serialize + Send + 'static,
+    T: serde::Serialize,
 {
     const KAFKA_URI_ENV_VAR: &str = "KAFKA_URI";
     const DEFAULT_KAFKA_URI: &str = "127.0.0.1:9092";

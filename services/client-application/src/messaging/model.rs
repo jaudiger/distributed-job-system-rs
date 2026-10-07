@@ -1,5 +1,6 @@
 use crate::domain;
 use anyhow::Result;
+use core::str::FromStr;
 
 #[derive(serde::Serialize)]
 pub struct OperationRequest {
@@ -40,10 +41,10 @@ impl OperationResult {
     }
 }
 
-impl TryFrom<&str> for OperationResult {
-    type Error = anyhow::Error;
+impl FromStr for OperationResult {
+    type Err = anyhow::Error;
 
-    fn try_from(message: &str) -> Result<Self, Self::Error> {
+    fn from_str(message: &str) -> Result<Self, Self::Err> {
         serde_json::from_str::<Self>(message).map_err(|err| anyhow::anyhow!(err))
     }
 }
