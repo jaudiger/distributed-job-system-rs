@@ -5,6 +5,7 @@ use common::counter;
 use futures::Future;
 use futures::StreamExt as _;
 use futures::TryStreamExt;
+use mongodb::ClientSession;
 use mongodb::Collection;
 use mongodb::IndexModel;
 use mongodb::bson::doc;
@@ -101,12 +102,16 @@ impl OperationRepository {
     pub async fn insert_operations(
         &self,
         new_operations: &[domain::operation::Operation],
-    ) -> Result<()> {
+        session: &mut ClientSession,
+    ) -> mongodb::error::Result<()> {
         tracing::debug!("Inserting operations");
 
         INSERT_OPERATIONS_COUNTER.add(1, &[]);
 
-        self.collection.insert_many(new_operations).await?;
+        self.collection
+            .insert_many(new_operations)
+            .session(&mut *session)
+            .await?;
 
         Ok(())
     }

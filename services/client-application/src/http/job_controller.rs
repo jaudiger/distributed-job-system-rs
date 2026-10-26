@@ -11,6 +11,7 @@ use axum::extract::Query;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use common::counter;
+use futures::FutureExt as _;
 use tracing::Instrument as _;
 
 counter!(
@@ -46,44 +47,41 @@ impl JobController {
 
         CREATE_JOB_COUNTER.add(1, &[]);
 
-        let lines = body.lines().count();
-
-        let new_job = domain::job::Job::new(lines)
+        let operation_requests = body.lines().collect::<Vec<_>>();
+        let new_job = domain::job::Job::new(operation_requests.len())
             .map_err(|err| ErrorResponse::bad_request(err.to_string()))?;
 
-        let job_id = state
-            .database_client()
-            .job_repository()
-            .insert_job(&new_job)
+        let job_repository = state.database_client().job_repository();
+        let operation_repository = state.database_client().operation_repository();
+        let mut session = state.database_client().start_session().await?;
+        let transaction_context = (
+            job_repository,
+            operation_repository,
+            &new_job,
+            &operation_requests,
+        );
+        let job_id = session
+            .start_transaction()
+            .and_run(
+                transaction_context,
+                |session, (job_repository, operation_repository, job, operation_requests)| {
+                    async move {
+                        let job_id = job_repository.insert_job(job, session).await?;
+                        let operations = operation_requests
+                            .iter()
+                            .map(|request| domain::operation::Operation::new(&job_id, *request))
+                            .collect::<Vec<_>>();
+
+                        operation_repository
+                            .insert_operations(&operations, session)
+                            .await?;
+
+                        Ok(job_id)
+                    }
+                    .boxed()
+                },
+            )
             .await?;
-
-        let new_operations: Vec<_> = body
-            .lines()
-            .map(|request| domain::operation::Operation::new(&job_id, request))
-            .collect();
-
-        // Add the operations to the database
-        if let Err(err) = state
-            .database_client()
-            .operation_repository()
-            .insert_operations(&new_operations)
-            .await
-        {
-            tracing::error!("Failed to insert operations: {err}");
-
-            if let Err(rollback_err) = state
-                .database_client()
-                .job_repository()
-                .delete_job(&job_id)
-                .await
-            {
-                tracing::error!(
-                    "Failed to roll back job {job_id} after insert_operations error: {rollback_err}"
-                );
-            }
-
-            return Err(err.into());
-        }
 
         // Send operation request message asynchronously
         let state_cloned = state.clone();

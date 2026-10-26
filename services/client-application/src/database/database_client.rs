@@ -2,8 +2,10 @@ use crate::database::job_repository::JobRepository;
 use crate::database::operation_repository::OperationRepository;
 use anyhow::Result;
 use mongodb::Client;
+use mongodb::ClientSession;
 
 pub struct DatabaseClient {
+    client: Client,
     job_repository: JobRepository,
     operation_repository: OperationRepository,
 }
@@ -33,9 +35,14 @@ impl DatabaseClient {
                 .await?;
 
         Ok(Self {
+            client,
             job_repository,
             operation_repository,
         })
+    }
+
+    pub async fn start_session(&self) -> mongodb::error::Result<ClientSession> {
+        self.client.start_session().await
     }
 
     pub const fn job_repository(&self) -> &JobRepository {

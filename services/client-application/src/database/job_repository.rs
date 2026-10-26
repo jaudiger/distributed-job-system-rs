@@ -3,6 +3,7 @@ use crate::domain;
 use anyhow::Result;
 use common::counter;
 use futures::TryStreamExt;
+use mongodb::ClientSession;
 use mongodb::Collection;
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
@@ -44,12 +45,20 @@ impl JobRepository {
     }
 
     #[tracing::instrument(skip(self))]
-    pub async fn insert_job(&self, job: &domain::job::Job) -> Result<String> {
+    pub async fn insert_job(
+        &self,
+        job: &domain::job::Job,
+        session: &mut ClientSession,
+    ) -> mongodb::error::Result<String> {
         tracing::debug!("Inserting a job");
 
         INSERT_JOB_COUNTER.add(1, &[]);
 
-        let result = self.collection.insert_one(job).await?;
+        let result = self
+            .collection
+            .insert_one(job)
+            .session(&mut *session)
+            .await?;
 
         Ok(result
             .inserted_id
