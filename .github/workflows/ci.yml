@@ -36,6 +36,7 @@ jobs:
               - '.github/workflows/ci.yml'
             docker:
               - '**/docker-compose.yml'
+              - '**/Dockerfile'
               - '.github/workflows/ci.yml'
             workflows:
               - '.github/workflows/**'
@@ -54,6 +55,11 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docker == 'true'
     uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-docker.yml@25bd11d2738d117af5419b38cb4cf0c092e95eaa
+    with:
+      paths: |
+        .
+        services/client-application
+        services/server-application
 
   lint-actions:
     needs: changes
