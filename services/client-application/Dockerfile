@@ -34,7 +34,7 @@ RUN set -eux; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
-FROM docker.io/debian:13.1-slim AS runtime
+FROM docker.io/debian:13.8-slim AS runtime
 WORKDIR /app
 RUN set -eux; \
     apt-get update; \
