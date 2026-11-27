@@ -1,4 +1,4 @@
-FROM docker.io/rust:1.91.1-slim-trixie AS base
+FROM docker.io/rust:1.100.0-slim-trixie AS base
 
 FROM base AS dependencies
 WORKDIR /builder
