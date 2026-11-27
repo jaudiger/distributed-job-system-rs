@@ -53,8 +53,6 @@ jobs:
     with:
       paths: |
         .
-        services/client-application
-        services/server-application
 
   lint-rust:
     needs: changes
