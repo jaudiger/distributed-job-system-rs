@@ -9,7 +9,7 @@ rust-version.workspace = true
 anyhow.workspace = true
 axum.workspace = true
 common = { path = "../common" }
-evalexpr = "13.1.0"
+evalexpr = "14.0.0"
 futures.workspace = true
 opentelemetry.workspace = true
 serde.workspace = true
