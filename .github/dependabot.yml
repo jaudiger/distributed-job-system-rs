@@ -19,6 +19,14 @@ updates:
         patterns:
           - "*"
 
+  - package-ecosystem: "docker"
+    directories:
+      - "/services/client-application"
+      - "/services/server-application"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+
   - package-ecosystem: "docker-compose"
     directories:
       - "/"
