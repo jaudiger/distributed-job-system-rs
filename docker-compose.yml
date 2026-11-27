@@ -214,15 +214,15 @@ services:
         condition: service_healthy
       mongo-secondary-2:
         condition: service_healthy
+    configs:
+      - source: mongo-schema-cfg
+        target: /etc/mongo/application-schema.js
     environment:
       MONGO_ROOT_USERNAME: "root"
       MONGO_ROOT_PASSWORD: "password"
       MONGO_CLIENT_USERNAME: "user"
       MONGO_CLIENT_PASSWORD: "password"
       MONGO_CLIENT_DATABASE: "application"
-    configs:
-      - source: mongo-schema-cfg
-        target: /etc/mongo/application-schema.js
     entrypoint: >
       bash -c '
         # Initialize the replica set
