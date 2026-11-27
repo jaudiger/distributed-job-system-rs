@@ -46,6 +46,16 @@ jobs:
     if: needs.changes.outputs.rust == 'true'
     uses: jaudiger/reusable-workflows/.github/workflows/build-rust.yml@6d49af28a19223af7709f7cb8c558d528554c617
 
+  build-docker:
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
+    uses: jaudiger/reusable-workflows/.github/workflows/build-docker.yml@6d49af28a19223af7709f7cb8c558d528554c617
+    with:
+      paths: |
+        .
+        services/client-application
+        services/server-application
+
   lint-rust:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
@@ -68,7 +78,7 @@ jobs:
 
   ci:
     if: always()
-    needs: [build-rust, lint-rust, lint-docker, lint-actions]
+    needs: [build-rust, build-docker, lint-rust, lint-docker, lint-actions]
     runs-on: ubuntu-latest
     steps:
       - name: Verify all required checks passed
