@@ -44,17 +44,17 @@ jobs:
   build-rust:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
-    uses: jaudiger/reusable-workflows/.github/workflows/build-rust.yml@25bd11d2738d117af5419b38cb4cf0c092e95eaa
+    uses: jaudiger/reusable-workflows/.github/workflows/build-rust.yml@6d49af28a19223af7709f7cb8c558d528554c617
 
   lint-rust:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
-    uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-rust.yml@25bd11d2738d117af5419b38cb4cf0c092e95eaa
+    uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-rust.yml@6d49af28a19223af7709f7cb8c558d528554c617
 
   lint-docker:
     needs: changes
     if: needs.changes.outputs.docker == 'true'
-    uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-docker.yml@25bd11d2738d117af5419b38cb4cf0c092e95eaa
+    uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-docker.yml@6d49af28a19223af7709f7cb8c558d528554c617
     with:
       paths: |
         .
@@ -64,7 +64,7 @@ jobs:
   lint-actions:
     needs: changes
     if: needs.changes.outputs.workflows == 'true'
-    uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-github-actions.yml@25bd11d2738d117af5419b38cb4cf0c092e95eaa
+    uses: jaudiger/reusable-workflows/.github/workflows/static-analysis-github-actions.yml@6d49af28a19223af7709f7cb8c558d528554c617
 
   ci:
     if: always()
