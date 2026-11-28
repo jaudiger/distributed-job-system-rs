@@ -27,8 +27,8 @@ COPY services/server-application/src/ ./services/server-application/src/
 ENV CARGO_HOME=/home/container/.cargo
 RUN set -eux; \
     apt-get update; \
-    apt-get upgrade -y; \
-    apt-get install -y --no-install-recommends clang=1:19.0-63 python3=3.13.5-1 make=4.4.1-2; \
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends clang=1:19.0-63 python3=3.13.5-1 make=4.4.1-2; \
     cargo build --locked --release --package server-application; \
     apt-get remove -y clang python3 make; \
     apt-get clean; \
@@ -38,8 +38,8 @@ FROM docker.io/debian:13.8-slim AS runtime
 WORKDIR /app
 RUN set -eux; \
     apt-get update; \
-    apt-get upgrade -y; \
-    apt-get install -y --no-install-recommends curl=8.14.1-2+deb13u7; \
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl=8.14.1-2+deb13u7; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 COPY --from=builder /builder/target/release/server-application ./main
