@@ -1,4 +1,4 @@
-FROM docker.io/rust:1.100.0-slim-trixie AS base
+FROM docker.io/library/rust:1.100.0-slim-trixie AS base
 
 FROM base AS dependencies
 WORKDIR /builder
@@ -34,7 +34,7 @@ RUN set -eux; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
-FROM docker.io/debian:13.8-slim AS runtime
+FROM docker.io/library/debian:13.8-slim AS runtime
 WORKDIR /app
 RUN set -eux; \
     apt-get update; \
